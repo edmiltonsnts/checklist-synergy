@@ -3,25 +3,37 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { X, Check, Search } from 'lucide-react';
-import { Checklist, ChecklistItem, Equipment } from '@/types/checklist';
-import { saveChecklist, getEquipments, getEquipmentById } from '@/services/checklistService';
+import { X, Check, Search, User } from 'lucide-react';
+import { Checklist, ChecklistItem, Equipment, Operator } from '@/types/checklist';
+import { saveChecklist, getEquipments } from '@/services/checklistService';
+import { getOperators } from '@/services/operatorsService';
 import { toast } from "sonner";
 import SignatureCanvas from './SignatureCanvas';
 import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 const ChecklistForm = () => {
   const [equipmentNumber, setEquipmentNumber] = useState('');
-  const [operatorName, setOperatorName] = useState('MABEL KRISTINE BRAMORSKI LON');
+  const [operatorName, setOperatorName] = useState('');
+  const [operatorId, setOperatorId] = useState('');
   const [equipment, setEquipment] = useState('');
   const [kpNumber, setKpNumber] = useState('');
   const [sector, setSector] = useState('');
   const [capacity, setCapacity] = useState('');
   const [signature, setSignature] = useState('');
   const [equipmentsList, setEquipmentsList] = useState<Equipment[]>([]);
+  const [operatorsList, setOperatorsList] = useState<Operator[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [filteredOperators, setFilteredOperators] = useState<Operator[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [operatorSearchTerm, setOperatorSearchTerm] = useState('');
   const [showEquipmentsList, setShowEquipmentsList] = useState(false);
+  const [showOperatorsList, setShowOperatorsList] = useState(false);
   
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
     { id: 1, question: 'Os cabos de aço apresentam fios partidos?', answer: null },
@@ -63,7 +75,20 @@ const ChecklistForm = () => {
       }
     };
 
+    // Carregar a lista de operadores
+    const fetchOperators = async () => {
+      try {
+        const operators = await getOperators();
+        setOperatorsList(operators);
+        setFilteredOperators(operators);
+      } catch (error) {
+        console.error('Erro ao carregar operadores:', error);
+        toast.error('Erro ao carregar a lista de operadores');
+      }
+    };
+
     fetchEquipments();
+    fetchOperators();
   }, []);
 
   useEffect(() => {
@@ -81,12 +106,33 @@ const ChecklistForm = () => {
     }
   }, [searchTerm, equipmentsList]);
 
+  useEffect(() => {
+    // Filtrar operadores baseado no termo de pesquisa
+    if (operatorSearchTerm.trim()) {
+      const filtered = operatorsList.filter(
+        op => 
+          op.id.toLowerCase().includes(operatorSearchTerm.toLowerCase()) || 
+          op.name.toLowerCase().includes(operatorSearchTerm.toLowerCase()) ||
+          op.sector.toLowerCase().includes(operatorSearchTerm.toLowerCase())
+      );
+      setFilteredOperators(filtered);
+    } else {
+      setFilteredOperators(operatorsList);
+    }
+  }, [operatorSearchTerm, operatorsList]);
+
   const handleEquipmentSelect = (selectedEquipment: Equipment) => {
     setEquipmentNumber(selectedEquipment.id);
     setEquipment(selectedEquipment.name);
     setSector(selectedEquipment.sector);
     setCapacity(selectedEquipment.capacity);
     setShowEquipmentsList(false);
+  };
+
+  const handleOperatorSelect = (selectedOperator: Operator) => {
+    setOperatorId(selectedOperator.id);
+    setOperatorName(selectedOperator.name);
+    setShowOperatorsList(false);
   };
 
   const handleAnswerChange = (id: number, value: string) => {
@@ -115,11 +161,17 @@ const ChecklistForm = () => {
       return;
     }
     
+    if (!operatorName) {
+      toast.warning('Por favor, selecione um operador antes de salvar');
+      return;
+    }
+    
     try {
       // Preparar os dados do checklist
       const checklistData: Checklist = {
         equipmentNumber,
         operatorName,
+        operatorId,
         equipment,
         kpNumber,
         sector,
@@ -204,16 +256,53 @@ const ChecklistForm = () => {
                 placeholder="Número do equipamento"
               />
             </div>
-            <div className="flex-1">
-              <Select>
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder={operatorName} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="op1">{operatorName}</SelectItem>
-                  <SelectItem value="op2">Outro Operador</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex-1 relative">
+              <div className="flex items-center gap-2">
+                <Input 
+                  value={operatorName} 
+                  onChange={(e) => {
+                    setOperatorName(e.target.value);
+                    setOperatorSearchTerm(e.target.value);
+                  }}
+                  onFocus={() => setShowOperatorsList(true)}
+                  placeholder="Selecione o operador" 
+                  className="bg-white pr-8"
+                />
+                <div 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                  onClick={() => setShowOperatorsList(!showOperatorsList)}
+                >
+                  <User className="w-4 h-4 text-gray-500" />
+                </div>
+              </div>
+              
+              {showOperatorsList && (
+                <div className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white rounded-md shadow-lg border border-gray-200">
+                  <div className="sticky top-0 bg-white p-2 border-b">
+                    <Input 
+                      value={operatorSearchTerm}
+                      onChange={(e) => setOperatorSearchTerm(e.target.value)}
+                      placeholder="Buscar operador..." 
+                      className="bg-gray-50"
+                    />
+                  </div>
+                  
+                  {filteredOperators.length > 0 ? (
+                    filteredOperators.map((op) => (
+                      <div 
+                        key={op.id}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => handleOperatorSelect(op)}
+                      >
+                        <div className="font-semibold">{op.name}</div>
+                        <div className="text-sm text-gray-600">{op.id} - {op.sector}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3 text-center text-gray-500">Nenhum operador encontrado</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

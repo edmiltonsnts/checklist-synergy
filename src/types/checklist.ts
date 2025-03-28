@@ -3,6 +3,7 @@ export interface Checklist {
   id?: number;
   equipmentNumber: string;
   operatorName: string;
+  operatorId?: string;
   equipment: string;
   kpNumber: string;
   sector: string;
@@ -24,5 +25,12 @@ export interface Equipment {
   name: string;
   type: string;
   capacity: string;
+  sector: string;
+}
+
+export interface Operator {
+  id: string;
+  name: string;
+  role: string;
   sector: string;
 }
