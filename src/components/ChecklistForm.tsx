@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -63,7 +62,6 @@ const ChecklistForm = () => {
   ]);
 
   useEffect(() => {
-    // Carregar a lista de equipamentos
     const fetchEquipments = async () => {
       try {
         const equipments = await getEquipments();
@@ -75,7 +73,6 @@ const ChecklistForm = () => {
       }
     };
 
-    // Carregar a lista de operadores
     const fetchOperators = async () => {
       try {
         const operators = await getOperators();
@@ -92,7 +89,6 @@ const ChecklistForm = () => {
   }, []);
 
   useEffect(() => {
-    // Filtrar equipamentos baseado no termo de pesquisa
     if (searchTerm.trim()) {
       const filtered = equipmentsList.filter(
         equip => 
@@ -107,7 +103,6 @@ const ChecklistForm = () => {
   }, [searchTerm, equipmentsList]);
 
   useEffect(() => {
-    // Filtrar operadores baseado no termo de pesquisa
     if (operatorSearchTerm.trim()) {
       const filtered = operatorsList.filter(
         op => 
@@ -148,7 +143,11 @@ const ChecklistForm = () => {
   };
 
   const saveChecklistData = async () => {
-    // Verificar se todos os itens foram respondidos
+    if (!kpNumber.trim()) {
+      toast.warning('Por favor, insira o número do KP');
+      return;
+    }
+
     const unansweredItems = checklistItems.filter(item => item.answer === null);
     
     if (unansweredItems.length > 0) {
@@ -167,7 +166,6 @@ const ChecklistForm = () => {
     }
     
     try {
-      // Preparar os dados do checklist
       const checklistData: Checklist = {
         equipmentNumber,
         operatorName,
@@ -180,7 +178,6 @@ const ChecklistForm = () => {
         signature
       };
       
-      // Enviar para o serviço
       const result = await saveChecklist(checklistData);
       
       toast.success("Checklist salvo com sucesso!");
@@ -194,7 +191,6 @@ const ChecklistForm = () => {
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
       <Card className="w-full max-w-md p-0 overflow-hidden shadow-lg">
-        {/* Header */}
         <div className="bg-primary text-white p-3 flex justify-between items-center">
           <X className="w-6 h-6 cursor-pointer" />
           <h1 className="text-xl font-semibold">Check List Online</h1>
@@ -202,7 +198,6 @@ const ChecklistForm = () => {
         </div>
 
         <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Equipment Selector */}
           <div className="relative">
             <div className="flex items-center gap-2 mb-2">
               <div className="text-blue-800 font-bold">Equipamento</div>
@@ -246,7 +241,6 @@ const ChecklistForm = () => {
             )}
           </div>
 
-          {/* Equipment Number and Operator */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <Input 
@@ -306,7 +300,6 @@ const ChecklistForm = () => {
             </div>
           </div>
 
-          {/* Equipment and KP */}
           <div className="flex items-center gap-2">
             <div className="text-blue-800 font-bold">* Equip</div>
             <div className="flex-1">
@@ -326,12 +319,11 @@ const ChecklistForm = () => {
               <Input 
                 value={kpNumber} 
                 onChange={(e) => setKpNumber(e.target.value)}
-                className="bg-white"
+                className="bg-blue-50 border-blue-300"
               />
             </div>
           </div>
 
-          {/* Sector */}
           <div className="flex items-center gap-2">
             <div className="text-blue-800 font-bold">Setor</div>
             <div className="flex-1">
@@ -343,7 +335,6 @@ const ChecklistForm = () => {
             </div>
           </div>
 
-          {/* Capacity */}
           <div className="flex items-center gap-2">
             <div className="flex-1 font-semibold text-right">Capacidade</div>
             <div className="flex-1">
@@ -355,7 +346,6 @@ const ChecklistForm = () => {
             </div>
           </div>
 
-          {/* Checklist Items */}
           <div className="space-y-3">
             {checklistItems.map((item) => (
               <div key={item.id} className="flex gap-2 items-center">
@@ -376,7 +366,6 @@ const ChecklistForm = () => {
             ))}
           </div>
 
-          {/* Signature Section */}
           <div className="mt-6 space-y-2">
             <div className="text-blue-800 font-bold mb-2">Assinatura do Operador</div>
             <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
@@ -384,7 +373,6 @@ const ChecklistForm = () => {
             </div>
           </div>
 
-          {/* Save Button */}
           <div className="flex justify-center mt-4">
             <Button 
               onClick={saveChecklistData}
