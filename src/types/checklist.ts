@@ -8,6 +8,7 @@ export interface Checklist {
   sector: string;
   capacity: string;
   items: ChecklistItem[];
+  signature?: string; // Campo para a assinatura do operador
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -18,5 +19,10 @@ export interface ChecklistItem {
   answer: string | null;
 }
 
-// Estas interfaces podem ser expandidas conforme necessário para
-// se adequarem ao seu esquema de banco de dados SQL Server
+export interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  capacity: string;
+  sector: string;
+}

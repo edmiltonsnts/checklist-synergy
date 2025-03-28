@@ -1,20 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { X, Check } from 'lucide-react';
-import { Checklist, ChecklistItem } from '@/types/checklist';
-import { saveChecklist } from '@/services/checklistService';
+import { X, Check, Search } from 'lucide-react';
+import { Checklist, ChecklistItem, Equipment } from '@/types/checklist';
+import { saveChecklist, getEquipments, getEquipmentById } from '@/services/checklistService';
 import { toast } from "sonner";
+import SignatureCanvas from './SignatureCanvas';
+import { Button } from '@/components/ui/button';
 
 const ChecklistForm = () => {
-  const [equipmentNumber, setEquipmentNumber] = useState('1200');
+  const [equipmentNumber, setEquipmentNumber] = useState('');
   const [operatorName, setOperatorName] = useState('MABEL KRISTINE BRAMORSKI LON');
-  const [equipment, setEquipment] = useState('Ponte 01');
-  const [kpNumber, setKpNumber] = useState('207');
-  const [sector, setSector] = useState('MOLDAGEM');
-  const [capacity, setCapacity] = useState('10 tons');
+  const [equipment, setEquipment] = useState('');
+  const [kpNumber, setKpNumber] = useState('');
+  const [sector, setSector] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [signature, setSignature] = useState('');
+  const [equipmentsList, setEquipmentsList] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showEquipmentsList, setShowEquipmentsList] = useState(false);
   
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
     { id: 1, question: 'Os cabos de aço apresentam fios partidos?', answer: null },
@@ -43,6 +50,45 @@ const ChecklistForm = () => {
     { id: 24, question: 'O equipamento apresenta ruídos estranhos?', answer: null }
   ]);
 
+  useEffect(() => {
+    // Carregar a lista de equipamentos
+    const fetchEquipments = async () => {
+      try {
+        const equipments = await getEquipments();
+        setEquipmentsList(equipments);
+        setFilteredEquipments(equipments);
+      } catch (error) {
+        console.error('Erro ao carregar equipamentos:', error);
+        toast.error('Erro ao carregar a lista de equipamentos');
+      }
+    };
+
+    fetchEquipments();
+  }, []);
+
+  useEffect(() => {
+    // Filtrar equipamentos baseado no termo de pesquisa
+    if (searchTerm.trim()) {
+      const filtered = equipmentsList.filter(
+        equip => 
+          equip.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          equip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          equip.sector.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredEquipments(filtered);
+    } else {
+      setFilteredEquipments(equipmentsList);
+    }
+  }, [searchTerm, equipmentsList]);
+
+  const handleEquipmentSelect = (selectedEquipment: Equipment) => {
+    setEquipmentNumber(selectedEquipment.id);
+    setEquipment(selectedEquipment.name);
+    setSector(selectedEquipment.sector);
+    setCapacity(selectedEquipment.capacity);
+    setShowEquipmentsList(false);
+  };
+
   const handleAnswerChange = (id: number, value: string) => {
     setChecklistItems(prevItems =>
       prevItems.map(item =>
@@ -51,12 +97,21 @@ const ChecklistForm = () => {
     );
   };
 
+  const handleSignatureSave = (signatureImage: string) => {
+    setSignature(signatureImage);
+  };
+
   const saveChecklistData = async () => {
     // Verificar se todos os itens foram respondidos
     const unansweredItems = checklistItems.filter(item => item.answer === null);
     
     if (unansweredItems.length > 0) {
       toast.warning(`Existem ${unansweredItems.length} perguntas não respondidas!`);
+      return;
+    }
+
+    if (!signature) {
+      toast.warning('Por favor, assine o formulário antes de salvar');
       return;
     }
     
@@ -69,7 +124,8 @@ const ChecklistForm = () => {
         kpNumber,
         sector,
         capacity,
-        items: checklistItems
+        items: checklistItems,
+        signature
       };
       
       // Enviar para o serviço
@@ -94,6 +150,50 @@ const ChecklistForm = () => {
         </div>
 
         <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* Equipment Selector */}
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="text-blue-800 font-bold">Equipamento</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setShowEquipmentsList(true)}
+                    placeholder="Pesquisar equipamento..." 
+                    className="bg-blue-50 border-blue-300"
+                  />
+                  <div 
+                    className="bg-primary text-white p-2 rounded cursor-pointer flex-shrink-0"
+                    onClick={() => setShowEquipmentsList(!showEquipmentsList)}
+                  >
+                    <Search className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {showEquipmentsList && (
+              <div className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white rounded-md shadow-lg border border-gray-200">
+                {filteredEquipments.length > 0 ? (
+                  filteredEquipments.map((equip) => (
+                    <div 
+                      key={equip.id}
+                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between"
+                      onClick={() => handleEquipmentSelect(equip)}
+                    >
+                      <div className="font-semibold">{equip.id}</div>
+                      <div>{equip.name}</div>
+                      <div className="text-sm text-gray-600">{equip.sector}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-center text-gray-500">Nenhum equipamento encontrado</div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Equipment Number and Operator */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -101,6 +201,7 @@ const ChecklistForm = () => {
                 value={equipmentNumber} 
                 onChange={(e) => setEquipmentNumber(e.target.value)}
                 className="bg-blue-50 border-blue-300"
+                placeholder="Número do equipamento"
               />
             </div>
             <div className="flex-1">
@@ -184,6 +285,24 @@ const ChecklistForm = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Signature Section */}
+          <div className="mt-6 space-y-2">
+            <div className="text-blue-800 font-bold mb-2">Assinatura do Operador</div>
+            <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+              <SignatureCanvas onSave={handleSignatureSave} />
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-center mt-4">
+            <Button 
+              onClick={saveChecklistData}
+              className="w-full"
+            >
+              Salvar Checklist
+            </Button>
           </div>
         </div>
       </Card>
