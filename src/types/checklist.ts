@@ -5,11 +5,11 @@ export interface Checklist {
   operatorName: string;
   operatorId?: string;
   equipment: string;
-  kpNumber: string;
+  kpNumber: string; // Agora este campo será preenchido automaticamente com o ID do equipamento
   sector: string;
   capacity: string;
   items: ChecklistItem[];
-  signature?: string; // Campo para a assinatura do operador
+  signature?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

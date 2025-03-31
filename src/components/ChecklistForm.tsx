@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { X, Check, Search, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { Checklist, ChecklistItem, Equipment, Operator } from '@/types/checklist';
 import { saveChecklist, getEquipments } from '@/services/checklistService';
 import { getOperators } from '@/services/operatorsService';
@@ -21,7 +21,6 @@ const ChecklistForm = () => {
   const [operatorName, setOperatorName] = useState('');
   const [operatorId, setOperatorId] = useState('');
   const [equipment, setEquipment] = useState('');
-  const [kpNumber, setKpNumber] = useState('');
   const [sector, setSector] = useState('');
   const [capacity, setCapacity] = useState('');
   const [signature, setSignature] = useState('');
@@ -143,8 +142,8 @@ const ChecklistForm = () => {
   };
 
   const saveChecklistData = async () => {
-    if (!kpNumber.trim()) {
-      toast.warning('Por favor, insira o número do KP');
+    if (!equipmentNumber.trim()) {
+      toast.warning('Por favor, selecione um equipamento');
       return;
     }
 
@@ -171,7 +170,7 @@ const ChecklistForm = () => {
         operatorName,
         operatorId,
         equipment,
-        kpNumber,
+        kpNumber: equipmentNumber,
         sector,
         capacity,
         items: checklistItems,
@@ -191,10 +190,8 @@ const ChecklistForm = () => {
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
       <Card className="w-full max-w-md p-0 overflow-hidden shadow-lg">
-        <div className="bg-primary text-white p-3 flex justify-between items-center">
-          <X className="w-6 h-6 cursor-pointer" />
+        <div className="bg-[#8B0000] text-white p-3 flex justify-center items-center">
           <h1 className="text-xl font-semibold">Check List Online</h1>
-          <Check className="w-6 h-6 cursor-pointer" onClick={saveChecklistData} />
         </div>
 
         <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
@@ -247,7 +244,8 @@ const ChecklistForm = () => {
                 value={equipmentNumber} 
                 onChange={(e) => setEquipmentNumber(e.target.value)}
                 className="bg-blue-50 border-blue-300"
-                placeholder="Número do equipamento"
+                placeholder="Número do equipamento / KP"
+                readOnly
               />
             </div>
             <div className="flex-1 relative">
@@ -303,22 +301,9 @@ const ChecklistForm = () => {
           <div className="flex items-center gap-2">
             <div className="text-blue-800 font-bold">* Equip</div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Input 
-                  value={equipment} 
-                  onChange={(e) => setEquipment(e.target.value)}
-                  className="bg-blue-50 border-blue-300"
-                />
-                <div className="bg-primary text-white p-2 rounded cursor-pointer flex-shrink-0">
-                  <Check className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-            <div className="text-blue-800 font-bold">KP</div>
-            <div className="w-20">
               <Input 
-                value={kpNumber} 
-                onChange={(e) => setKpNumber(e.target.value)}
+                value={equipment} 
+                onChange={(e) => setEquipment(e.target.value)}
                 className="bg-blue-50 border-blue-300"
               />
             </div>
@@ -376,7 +361,7 @@ const ChecklistForm = () => {
           <div className="flex justify-center mt-4">
             <Button 
               onClick={saveChecklistData}
-              className="w-full"
+              className="w-full bg-[#8B0000] hover:bg-[#6B0000]"
             >
               Salvar Checklist
             </Button>
