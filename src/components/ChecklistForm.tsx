@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -189,15 +190,15 @@ const ChecklistForm = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
-      <Card className="w-full max-w-md p-0 overflow-hidden shadow-lg">
+      <Card className="w-full max-w-3xl p-0 overflow-hidden shadow-lg">
         <div className="bg-[#8B0000] text-white p-3 flex justify-center items-center">
-          <h1 className="text-xl font-semibold">Check List Online</h1>
+          <h1 className="text-2xl font-semibold">Check List Online</h1>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
           <div className="relative">
             <div className="flex items-center gap-2 mb-2">
-              <div className="text-blue-800 font-bold">Equipamento</div>
+              <div className="text-blue-800 font-bold text-lg">Equipamento</div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <Input 
@@ -226,8 +227,8 @@ const ChecklistForm = () => {
                       className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between"
                       onClick={() => handleEquipmentSelect(equip)}
                     >
-                      <div className="font-semibold">{equip.id}</div>
-                      <div>{equip.name}</div>
+                      <div className="font-semibold text-[#8B0000]">{equip.id}</div>
+                      <div className="text-gray-700">{equip.name}</div>
                       <div className="text-sm text-gray-600">{equip.sector}</div>
                     </div>
                   ))
@@ -238,12 +239,12 @@ const ChecklistForm = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <div className="flex-1">
               <Input 
                 value={equipmentNumber} 
                 onChange={(e) => setEquipmentNumber(e.target.value)}
-                className="bg-blue-50 border-blue-300"
+                className="bg-blue-50 border-blue-300 text-lg font-medium"
                 placeholder="Número do equipamento / KP"
                 readOnly
               />
@@ -258,7 +259,7 @@ const ChecklistForm = () => {
                   }}
                   onFocus={() => setShowOperatorsList(true)}
                   placeholder="Selecione o operador" 
-                  className="bg-white pr-8"
+                  className="bg-white pr-8 text-gray-700"
                 />
                 <div 
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
@@ -286,7 +287,7 @@ const ChecklistForm = () => {
                         className="p-2 hover:bg-gray-100 cursor-pointer"
                         onClick={() => handleOperatorSelect(op)}
                       >
-                        <div className="font-semibold">{op.name}</div>
+                        <div className="font-semibold text-[#8B0000]">{op.name}</div>
                         <div className="text-sm text-gray-600">{op.id} - {op.sector}</div>
                       </div>
                     ))
@@ -299,42 +300,43 @@ const ChecklistForm = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="text-blue-800 font-bold">* Equip</div>
+            <div className="text-blue-800 font-bold text-lg">* Equip</div>
             <div className="flex-1">
               <Input 
                 value={equipment} 
                 onChange={(e) => setEquipment(e.target.value)}
-                className="bg-blue-50 border-blue-300"
+                className="bg-blue-50 border-blue-300 text-gray-700"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="text-blue-800 font-bold">Setor</div>
+            <div className="text-blue-800 font-bold text-lg">Setor</div>
             <div className="flex-1">
               <Input 
                 value={sector} 
                 onChange={(e) => setSector(e.target.value)}
-                className="bg-white"
+                className="bg-white text-gray-700"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex-1 font-semibold text-right">Capacidade</div>
+            <div className="flex-1 font-semibold text-right text-lg text-blue-800">Capacidade</div>
             <div className="flex-1">
               <Input 
                 value={capacity} 
                 onChange={(e) => setCapacity(e.target.value)}
-                className="bg-white"
+                className="bg-white text-gray-700"
               />
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mt-6">
+            <div className="text-center text-xl font-bold text-[#8B0000] mb-4">Itens de Verificação</div>
             {checklistItems.map((item) => (
               <div key={item.id} className="flex gap-2 items-center">
-                <div className="flex-1 text-sm">{item.question}</div>
+                <div className="flex-1 text-gray-800">{item.question}</div>
                 <div className="w-28">
                   <Select onValueChange={(value) => handleAnswerChange(item.id, value)}>
                     <SelectTrigger className="w-full bg-white">
@@ -352,16 +354,16 @@ const ChecklistForm = () => {
           </div>
 
           <div className="mt-6 space-y-2">
-            <div className="text-blue-800 font-bold mb-2">Assinatura do Operador</div>
+            <div className="text-blue-800 font-bold text-lg mb-2">Assinatura do Operador</div>
             <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
               <SignatureCanvas onSave={handleSignatureSave} />
             </div>
           </div>
 
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-6">
             <Button 
               onClick={saveChecklistData}
-              className="w-full bg-[#8B0000] hover:bg-[#6B0000]"
+              className="w-full bg-[#8B0000] hover:bg-[#6B0000] text-lg py-6"
             >
               Salvar Checklist
             </Button>
