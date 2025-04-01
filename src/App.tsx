@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Checklist from "./pages/Checklist";
 import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
+import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/checklist" element={<Checklist />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/history" element={<History />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

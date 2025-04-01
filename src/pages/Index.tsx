@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Settings } from 'lucide-react';
+import { ChevronRight, Settings, ClipboardList, FileDown } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -19,6 +19,18 @@ const Index = () => {
               className="w-full h-14 bg-[#8B0000] hover:bg-[#6B0000] text-lg flex justify-between items-center"
             >
               <span>Iniciar Checklist</span>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </Link>
+          
+          <Link to="/history" className="w-full">
+            <Button 
+              className="w-full h-14 bg-[#3B82F6] hover:bg-[#2563EB] text-lg flex justify-between items-center"
+            >
+              <span className="flex items-center">
+                <ClipboardList className="mr-2 h-5 w-5" />
+                Histórico de Checklists
+              </span>
               <ChevronRight className="h-5 w-5" />
             </Button>
           </Link>

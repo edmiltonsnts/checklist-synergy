@@ -12,6 +12,7 @@ export interface Checklist {
   signature?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  completed?: boolean;
 }
 
 export interface ChecklistItem {
@@ -33,4 +34,22 @@ export interface Operator {
   name: string;
   role: string;
   sector: string;
+}
+
+export interface Sector {
+  id: string;
+  name: string;
+  email?: string; // Email para onde serão enviados os relatórios deste setor
+}
+
+export interface ChecklistHistory {
+  id: string;
+  equipmentId: string;
+  equipmentName: string;
+  operatorId: string;
+  operatorName: string;
+  sector: string;
+  date: string;
+  items: ChecklistItem[];
+  signature?: string;
 }

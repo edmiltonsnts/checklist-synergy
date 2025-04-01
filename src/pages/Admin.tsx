@@ -8,16 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar } from 'lucide-react';
-import { Equipment, Operator } from '@/types/checklist';
+import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar, Mail } from 'lucide-react';
+import { Equipment, Operator, Sector } from '@/types/checklist';
 import { getEquipments } from '@/services/checklistService';
 import { getOperators } from '@/services/operatorsService';
-
-// Interface para setor
-interface Sector {
-  id: string;
-  name: string;
-}
+import { exportToJson, importFromJson } from '@/services/historyService';
 
 // Interface para item de checklist
 interface ChecklistTemplate {
@@ -52,7 +47,8 @@ const Admin = () => {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [newSector, setNewSector] = useState<Partial<Sector>>({
     id: '',
-    name: ''
+    name: '',
+    email: ''
   });
 
   // Estados para modelos de checklist
@@ -64,6 +60,9 @@ const Admin = () => {
   });
   const [newItem, setNewItem] = useState('');
   const [currentItems, setCurrentItems] = useState<{id: number; question: string}[]>([]);
+
+  // Estados para importação/exportação
+  const [importType, setImportType] = useState<'equipments' | 'operators' | 'sectors' | 'checklists'>('equipments');
 
   // Carregar dados
   useEffect(() => {
@@ -77,26 +76,40 @@ const Admin = () => {
         const operatorsData = await getOperators();
         setOperators(operatorsData);
 
-        // Mock de setores (pode ser substituído por API)
-        const sectorsData = [
-          { id: '1', name: 'Produção' },
-          { id: '2', name: 'Manutenção' },
-          { id: '3', name: 'Logística' }
-        ];
-        setSectors(sectorsData);
+        // Carregar setores do localStorage (ou mock)
+        const storedSectors = localStorage.getItem('sectors');
+        if (storedSectors) {
+          setSectors(JSON.parse(storedSectors));
+        } else {
+          // Mock de setores iniciais
+          const sectorsData = [
+            { id: '1', name: 'Produção', email: 'producao@empresa.com' },
+            { id: '2', name: 'Manutenção', email: 'manutencao@empresa.com' },
+            { id: '3', name: 'Logística', email: 'logistica@empresa.com' }
+          ];
+          setSectors(sectorsData);
+          localStorage.setItem('sectors', JSON.stringify(sectorsData));
+        }
 
-        // Mock de checklists (pode ser substituído por API)
-        const checklistsData = [
-          { 
-            id: '1', 
-            name: 'Checklist Padrão', 
-            items: [
-              { id: 1, question: 'Verificar lubrificação' },
-              { id: 2, question: 'Verificar nível de óleo' }
-            ]
-          }
-        ];
-        setChecklists(checklistsData);
+        // Carregar checklists do localStorage (ou mock)
+        const storedChecklists = localStorage.getItem('checklist_templates');
+        if (storedChecklists) {
+          setChecklists(JSON.parse(storedChecklists));
+        } else {
+          // Mock de checklist inicial
+          const checklistsData = [
+            { 
+              id: '1', 
+              name: 'Checklist Padrão', 
+              items: [
+                { id: 1, question: 'Verificar lubrificação' },
+                { id: 2, question: 'Verificar nível de óleo' }
+              ]
+            }
+          ];
+          setChecklists(checklistsData);
+          localStorage.setItem('checklist_templates', JSON.stringify(checklistsData));
+        }
 
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -121,13 +134,18 @@ const Admin = () => {
     }
 
     const equipmentToAdd = { ...newEquipment } as Equipment;
-    setEquipments([...equipments, equipmentToAdd]);
+    const updatedEquipments = [...equipments, equipmentToAdd];
+    setEquipments(updatedEquipments);
+    localStorage.setItem('equipments', JSON.stringify(updatedEquipments));
+    
     setNewEquipment({ id: '', name: '', type: '', capacity: '', sector: '' });
     toast.success('Equipamento adicionado com sucesso');
   };
 
   const handleDeleteEquipment = (id: string) => {
-    setEquipments(equipments.filter(e => e.id !== id));
+    const updatedEquipments = equipments.filter(e => e.id !== id);
+    setEquipments(updatedEquipments);
+    localStorage.setItem('equipments', JSON.stringify(updatedEquipments));
     toast.success('Equipamento removido com sucesso');
   };
 
@@ -145,20 +163,25 @@ const Admin = () => {
     }
 
     const operatorToAdd = { ...newOperator } as Operator;
-    setOperators([...operators, operatorToAdd]);
+    const updatedOperators = [...operators, operatorToAdd];
+    setOperators(updatedOperators);
+    localStorage.setItem('operators', JSON.stringify(updatedOperators));
+    
     setNewOperator({ id: '', name: '', role: '', sector: '' });
     toast.success('Operador adicionado com sucesso');
   };
 
   const handleDeleteOperator = (id: string) => {
-    setOperators(operators.filter(o => o.id !== id));
+    const updatedOperators = operators.filter(o => o.id !== id);
+    setOperators(updatedOperators);
+    localStorage.setItem('operators', JSON.stringify(updatedOperators));
     toast.success('Operador removido com sucesso');
   };
 
   // Funções para setores
   const handleAddSector = () => {
     if (!newSector.id || !newSector.name) {
-      toast.error('Preencha todos os campos');
+      toast.error('Preencha os campos obrigatórios');
       return;
     }
 
@@ -169,13 +192,18 @@ const Admin = () => {
     }
 
     const sectorToAdd = { ...newSector } as Sector;
-    setSectors([...sectors, sectorToAdd]);
-    setNewSector({ id: '', name: '' });
+    const updatedSectors = [...sectors, sectorToAdd];
+    setSectors(updatedSectors);
+    localStorage.setItem('sectors', JSON.stringify(updatedSectors));
+    
+    setNewSector({ id: '', name: '', email: '' });
     toast.success('Setor adicionado com sucesso');
   };
 
   const handleDeleteSector = (id: string) => {
-    setSectors(sectors.filter(s => s.id !== id));
+    const updatedSectors = sectors.filter(s => s.id !== id);
+    setSectors(updatedSectors);
+    localStorage.setItem('sectors', JSON.stringify(updatedSectors));
     toast.success('Setor removido com sucesso');
   };
 
@@ -212,15 +240,79 @@ const Admin = () => {
       items: [...currentItems] 
     } as ChecklistTemplate;
     
-    setChecklists([...checklists, checklistToAdd]);
+    const updatedChecklists = [...checklists, checklistToAdd];
+    setChecklists(updatedChecklists);
+    localStorage.setItem('checklist_templates', JSON.stringify(updatedChecklists));
+    
     setNewChecklist({ id: '', name: '' });
     setCurrentItems([]);
     toast.success('Checklist adicionado com sucesso');
   };
 
   const handleDeleteChecklist = (id: string) => {
-    setChecklists(checklists.filter(c => c.id !== id));
+    const updatedChecklists = checklists.filter(c => c.id !== id);
+    setChecklists(updatedChecklists);
+    localStorage.setItem('checklist_templates', JSON.stringify(updatedChecklists));
     toast.success('Checklist removido com sucesso');
+  };
+
+  // Funções para importação/exportação
+  const handleExportData = (type: 'equipments' | 'operators' | 'sectors' | 'checklists') => {
+    let data: any;
+    switch (type) {
+      case 'equipments':
+        data = equipments;
+        break;
+      case 'operators':
+        data = operators;
+        break;
+      case 'sectors':
+        data = sectors;
+        break;
+      case 'checklists':
+        data = checklists;
+        break;
+    }
+    
+    if (data && data.length > 0) {
+      exportToJson(data);
+    } else {
+      toast.error('Não há dados para exportar');
+    }
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    importFromJson(file)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          switch (importType) {
+            case 'equipments':
+              setEquipments(data);
+              localStorage.setItem('equipments', JSON.stringify(data));
+              break;
+            case 'operators':
+              setOperators(data);
+              localStorage.setItem('operators', JSON.stringify(data));
+              break;
+            case 'sectors':
+              setSectors(data);
+              localStorage.setItem('sectors', JSON.stringify(data));
+              break;
+            case 'checklists':
+              setChecklists(data);
+              localStorage.setItem('checklist_templates', JSON.stringify(data));
+              break;
+          }
+        } else {
+          toast.error('Formato inválido. O arquivo deve conter um array');
+        }
+      })
+      .catch(error => {
+        console.error('Erro na importação:', error);
+      });
   };
 
   // Voltar para a página inicial
@@ -228,8 +320,13 @@ const Admin = () => {
     navigate('/');
   };
 
-  // Salvar todas as alterações (em um cenário real, enviaria para APIs)
+  // Salvar todas as alterações
   const handleSaveAll = () => {
+    localStorage.setItem('equipments', JSON.stringify(equipments));
+    localStorage.setItem('operators', JSON.stringify(operators));
+    localStorage.setItem('sectors', JSON.stringify(sectors));
+    localStorage.setItem('checklist_templates', JSON.stringify(checklists));
+    
     toast.success('Todas as alterações foram salvas com sucesso!');
   };
 
@@ -259,6 +356,51 @@ const Admin = () => {
               Gerencie equipamentos, operadores, setores e checklists
             </CardDescription>
           </CardHeader>
+          <CardContent className="pt-6">
+            <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportType('equipments');
+                  document.getElementById('importFile')?.click();
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" /> Importar Equipamentos
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleExportData('equipments')}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" /> Exportar Equipamentos
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportType('operators');
+                  document.getElementById('importFile')?.click();
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" /> Importar Operadores
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleExportData('operators')}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" /> Exportar Operadores
+              </Button>
+              <Input
+                type="file"
+                id="importFile"
+                accept=".json"
+                onChange={handleImportData}
+                className="hidden"
+              />
+            </div>
+          </CardContent>
         </Card>
 
         <Tabs defaultValue="equipments" className="w-full">
@@ -504,12 +646,12 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Gerenciar Setores</CardTitle>
                 <CardDescription>
-                  Adicione, edite ou remova setores da empresa
+                  Adicione, edite ou remova setores da empresa e configure emails para relatórios
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="sector-id">ID/Código</Label>
                       <Input 
@@ -529,6 +671,16 @@ const Admin = () => {
                       />
                     </div>
                     <div>
+                      <Label htmlFor="sector-email">Email do Setor</Label>
+                      <Input 
+                        id="sector-email" 
+                        type="email"
+                        value={newSector.email || ''}
+                        onChange={(e) => setNewSector({...newSector, email: e.target.value})}
+                        placeholder="Ex: setor@empresa.com.br"
+                      />
+                    </div>
+                    <div>
                       <Button 
                         onClick={handleAddSector}
                         className="w-full bg-[#8B0000] hover:bg-[#6B0000] mt-8"
@@ -544,6 +696,7 @@ const Admin = () => {
                         <TableRow>
                           <TableHead>ID/Código</TableHead>
                           <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -552,6 +705,7 @@ const Admin = () => {
                           <TableRow key={sector.id}>
                             <TableCell>{sector.id}</TableCell>
                             <TableCell>{sector.name}</TableCell>
+                            <TableCell>{sector.email || '-'}</TableCell>
                             <TableCell className="text-right">
                               <Button 
                                 variant="ghost" 
@@ -566,7 +720,7 @@ const Admin = () => {
                         ))}
                         {sectors.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center py-4 text-gray-500">
+                            <TableCell colSpan={4} className="text-center py-4 text-gray-500">
                               Nenhum setor cadastrado
                             </TableCell>
                           </TableRow>
