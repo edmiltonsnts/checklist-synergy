@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Checklist from "./pages/Checklist";
+import SelectChecklist from "./pages/SelectChecklist";
 import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
 import History from "./pages/History";
@@ -21,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/select-checklist" element={<SelectChecklist />} />
           <Route path="/checklist" element={<Checklist />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
