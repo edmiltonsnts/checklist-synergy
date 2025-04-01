@@ -1,42 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Card, CardContent, CardDescription, CardHeader, CardTitle 
-} from '@/components/ui/card';
+  Table, TableBody, TableCaption, TableCell, 
+  TableHead, TableHeader, TableRow 
+} from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from '@/components/ui/table';
-import { 
-  Dialog, DialogContent, DialogDescription, DialogHeader, 
-  DialogTitle, DialogTrigger, DialogFooter, DialogClose 
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { ArrowLeft, Download, FilePlus, FileText, Send, Trash2 } from 'lucide-react';
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Download, Import, MoreVertical, Search, Trash, RefreshCw } from 'lucide-react';
 import { ChecklistHistory } from '@/types/checklist';
 import { 
-  getChecklistHistory, clearChecklistHistory, exportToJson, importFromJson 
+  clearChecklistHistory, 
+  exportToJson, 
+  importFromJson 
 } from '@/services/historyService';
-import { savePDF, sendEmailWithPDF } from '@/services/pdfService';
+import { getChecklistHistoryFromServer, syncLocalHistoryWithServer } from '@/services/sqlServerService';
+import { toast } from 'sonner';
 
 const History = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<ChecklistHistory[]>([]);
-  const [selectedChecklist, setSelectedChecklist] = useState<ChecklistHistory | null>(null);
-  const [filterSector, setFilterSector] = useState('');
-  const [filterEquipment, setFilterEquipment] = useState('');
-  const [email, setEmail] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  const loadHistory = async () => {
+    setLoading(true);
+    try {
+      // Tentar buscar do SQL Server primeiro
+      const serverHistory = await getChecklistHistoryFromServer();
+      setHistory(serverHistory);
+    } catch (error) {
+      console.error('Erro ao buscar histórico:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadHistory();
   }, []);
-
-  const loadHistory = () => {
-    const data = getChecklistHistory();
-    setHistory(data);
-  };
 
   const handleBack = () => {
     navigate('/admin');
@@ -44,61 +52,51 @@ const History = () => {
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    importFromJson(file)
-      .then((data) => {
-        if (Array.isArray(data)) {
-          localStorage.setItem('checklist_history', JSON.stringify(data));
-          loadHistory();
-        } else {
-          toast.error('Formato inválido. O arquivo deve conter um array de checklists');
-        }
-      })
-      .catch(error => {
-        console.error('Erro na importação:', error);
-      });
-  };
-
-  const handleViewDetails = (checklist: ChecklistHistory) => {
-    setSelectedChecklist(checklist);
-  };
-
-  const handleExportPDF = (checklist: ChecklistHistory) => {
-    savePDF(checklist);
-  };
-
-  const handleSendEmail = () => {
-    if (!selectedChecklist) return;
-    
-    if (!email) {
-      toast.error('Digite um email válido');
+    if (!file) {
+      toast.error('Nenhum arquivo selecionado');
       return;
     }
     
-    sendEmailWithPDF(selectedChecklist, email);
+    importFromJson(file)
+      .then(data => {
+        if (Array.isArray(data)) {
+          localStorage.setItem('checklist_history', JSON.stringify(data));
+          setHistory(data);
+          toast.success('Histórico importado com sucesso!');
+        } else {
+          toast.error('Formato de arquivo inválido. Esperado um array de checklists.');
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao importar dados:', error);
+        toast.error('Erro ao importar dados.');
+      });
   };
 
-  const handleClearHistory = () => {
-    if (window.confirm('Tem certeza que deseja limpar todo o histórico? Esta ação não pode ser desfeita.')) {
-      clearChecklistHistory();
-      setHistory([]);
+  const handleSyncWithServer = async () => {
+    setSyncing(true);
+    try {
+      await syncLocalHistoryWithServer();
+      await loadHistory(); // Recarregar dados após sincronização
+      toast.success('Dados sincronizados com o SQL Server com sucesso!');
+    } catch (error) {
+      console.error('Erro ao sincronizar com servidor:', error);
+      toast.error('Falha na sincronização com o servidor');
+    } finally {
+      setSyncing(false);
     }
   };
 
-  const filteredHistory = history.filter(item => {
-    return (
-      (filterSector === '' || item.sector.toLowerCase().includes(filterSector.toLowerCase())) &&
-      (filterEquipment === '' || 
-        item.equipmentName.toLowerCase().includes(filterEquipment.toLowerCase()) ||
-        item.equipmentId.toLowerCase().includes(filterEquipment.toLowerCase()))
-    );
-  });
+  const filteredHistory = history.filter(item => 
+    item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.operatorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.equipmentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 p-4">
-      <div className="container mx-auto max-w-6xl">
-        <div className="flex justify-between items-center mb-6">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-4">
           <Button 
             onClick={handleBack} 
             variant="outline" 
@@ -108,212 +106,113 @@ const History = () => {
           </Button>
           
           <div className="flex gap-2">
-            <Button
+            <Button 
+              onClick={handleSyncWithServer}
               variant="outline"
-              onClick={() => exportToJson(history)}
               className="gap-2"
+              disabled={syncing}
             >
-              <Download className="h-4 w-4" /> Exportar
+              <RefreshCw className="h-4 w-4" /> 
+              {syncing ? 'Sincronizando...' : 'Sincronizar com Servidor'}
             </Button>
             
-            <div className="relative">
-              <Input
-                type="file"
-                id="importFile"
-                accept=".json"
-                onChange={handleImport}
-                className="hidden"
-              />
-              <Button
-                variant="outline"
-                onClick={() => document.getElementById('importFile')?.click()}
-                className="gap-2"
-              >
-                <FilePlus className="h-4 w-4" /> Importar
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" /> Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportToJson(history)}>
+                  Exportar para JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={clearChecklistHistory}>
+                  Limpar Histórico
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <label htmlFor="import-json">
+              <Button variant="outline" asChild className="gap-2">
+                <Import className="h-4 w-4" /> Importar
               </Button>
-            </div>
-            
-            <Button
-              variant="destructive"
-              onClick={handleClearHistory}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" /> Limpar
-            </Button>
+            </label>
+            <Input 
+              type="file" 
+              id="import-json" 
+              className="hidden" 
+              onChange={handleImport}
+              accept=".json"
+            />
           </div>
         </div>
-
-        <Card className="mb-6">
-          <CardHeader className="bg-[#8B0000] text-white rounded-t-lg">
+        
+        <Card>
+          <CardHeader>
             <CardTitle>Histórico de Checklists</CardTitle>
-            <CardDescription className="text-gray-200">
-              Visualize, exporte ou envie por email os checklists realizados
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <Label htmlFor="filterSector">Filtrar por Setor</Label>
-                <Input 
-                  id="filterSector" 
-                  value={filterSector}
-                  onChange={(e) => setFilterSector(e.target.value)}
-                  placeholder="Digite o nome do setor"
-                />
-              </div>
-              <div>
-                <Label htmlFor="filterEquipment">Filtrar por Equipamento</Label>
-                <Input 
-                  id="filterEquipment" 
-                  value={filterEquipment}
-                  onChange={(e) => setFilterEquipment(e.target.value)}
-                  placeholder="Digite o nome ou código do equipamento"
-                />
-              </div>
+          <CardContent>
+            <div className="mb-4">
+              <Label htmlFor="search">Pesquisar:</Label>
+              <Input
+                type="text"
+                id="search"
+                placeholder="Pesquisar por equipamento, operador..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-
-            <div className="border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Equipamento</TableHead>
-                    <TableHead>Operador</TableHead>
-                    <TableHead>Setor</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredHistory.length > 0 ? (
-                    filteredHistory.map((item) => (
+            
+            {loading ? (
+              <div className="text-center">Carregando histórico...</div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Equipamento</TableHead>
+                      <TableHead>Operador</TableHead>
+                      <TableHead>Setor</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredHistory.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{new Date(item.date).toLocaleString('pt-BR')}</TableCell>
-                        <TableCell>{item.equipmentId} - {item.equipmentName}</TableCell>
-                        <TableCell>{item.operatorName} ({item.operatorId})</TableCell>
+                        <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{item.equipmentName} ({item.equipmentId})</TableCell>
+                        <TableCell>{item.operatorName}</TableCell>
                         <TableCell>{item.sector}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleViewDetails(item)}
-                                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Detalhes do Checklist</DialogTitle>
-                                  <DialogDescription>
-                                    Checklist realizado em {new Date(item.date).toLocaleString('pt-BR')}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid grid-cols-2 gap-4 py-4">
-                                  <div>
-                                    <p className="text-sm font-medium">Equipamento:</p>
-                                    <p>{item.equipmentId} - {item.equipmentName}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Operador:</p>
-                                    <p>{item.operatorName} ({item.operatorId})</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Setor:</p>
-                                    <p>{item.sector}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Data:</p>
-                                    <p>{new Date(item.date).toLocaleString('pt-BR')}</p>
-                                  </div>
-                                </div>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Item</TableHead>
-                                      <TableHead>Pergunta</TableHead>
-                                      <TableHead>Resposta</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {item.items.map((question, index) => (
-                                      <TableRow key={index}>
-                                        <TableCell>{index + 1}</TableCell>
-                                        <TableCell>{question.question}</TableCell>
-                                        <TableCell>{question.answer || "Não respondido"}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                                {item.signature && (
-                                  <div className="mt-4">
-                                    <p className="text-sm font-medium mb-2">Assinatura:</p>
-                                    <img 
-                                      src={item.signature} 
-                                      alt="Assinatura do operador" 
-                                      className="border border-gray-300 max-h-32" 
-                                    />
-                                  </div>
-                                )}
-                                <div className="mt-4">
-                                  <Label htmlFor="emailInput">Enviar para e-mail:</Label>
-                                  <div className="flex mt-2 gap-2">
-                                    <Input 
-                                      id="emailInput"
-                                      type="email"
-                                      placeholder="email@exemplo.com.br"
-                                      value={email}
-                                      onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                    <Button 
-                                      onClick={handleSendEmail}
-                                      className="bg-[#8B0000] hover:bg-[#6B0000] gap-2"
-                                    >
-                                      <Send className="h-4 w-4" /> Enviar
-                                    </Button>
-                                  </div>
-                                </div>
-                                <DialogFooter className="mt-4">
-                                  <Button 
-                                    variant="outline" 
-                                    onClick={() => handleExportPDF(item)}
-                                    className="gap-2"
-                                  >
-                                    <Download className="h-4 w-4" /> Salvar como PDF
-                                  </Button>
-                                  <DialogClose asChild>
-                                    <Button>Fechar</Button>
-                                  </DialogClose>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                            
-                            <Button
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleExportPDF(item)}
-                              className="text-green-500 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Trash className="h-4 w-4 mr-2" />
+                                Deletar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                        {history.length === 0 
-                          ? "Nenhum checklist no histórico" 
-                          : "Nenhum checklist encontrado com os filtros aplicados"}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                    {filteredHistory.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">
+                          Nenhum histórico encontrado.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

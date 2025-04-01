@@ -11,6 +11,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
+import ServerConnectionStatus from "./components/ServerConnectionStatus";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <div className="fixed bottom-2 right-2 z-50">
+          <ServerConnectionStatus />
+        </div>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/select-checklist" element={<SelectChecklist />} />

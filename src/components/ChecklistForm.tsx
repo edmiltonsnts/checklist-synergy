@@ -1,13 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Checklist, ChecklistItem, Equipment, Operator } from '@/types/checklist';
 import { saveChecklist } from '@/services/checklistService';
+import { saveChecklistToServer } from '@/services/sqlServerService';
 import { toast } from "sonner";
 import SignatureCanvas from './SignatureCanvas';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface ChecklistFormProps {
   initialEquipment: Equipment;
@@ -15,6 +17,7 @@ interface ChecklistFormProps {
 }
 
 const ChecklistForm = ({ initialEquipment, initialOperator }: ChecklistFormProps) => {
+  const navigate = useNavigate();
   const [equipmentNumber, setEquipmentNumber] = useState(initialEquipment.id);
   const [operatorName, setOperatorName] = useState(initialOperator.name);
   const [operatorId, setOperatorId] = useState(initialOperator.id);
@@ -22,6 +25,7 @@ const ChecklistForm = ({ initialEquipment, initialOperator }: ChecklistFormProps
   const [sector, setSector] = useState(initialEquipment.sector);
   const [capacity, setCapacity] = useState(initialEquipment.capacity);
   const [signature, setSignature] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
     { id: 1, question: 'Os cabos de aço apresentam fios partidos?', answer: null },
@@ -76,6 +80,8 @@ const ChecklistForm = ({ initialEquipment, initialOperator }: ChecklistFormProps
     }
     
     try {
+      setIsSaving(true);
+      
       const checklistData: Checklist = {
         equipmentNumber,
         operatorName,
@@ -85,16 +91,31 @@ const ChecklistForm = ({ initialEquipment, initialOperator }: ChecklistFormProps
         sector,
         capacity,
         items: checklistItems,
-        signature
+        signature,
+        completed: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
-      const result = await saveChecklist(checklistData);
+      // Primeiro tenta salvar no SQL Server
+      try {
+        await saveChecklistToServer(checklistData);
+        toast.success("Checklist salvo no SQL Server com sucesso!");
+      } catch (error) {
+        // Se falhar, salva localmente
+        await saveChecklist(checklistData);
+        toast.info("Checklist salvo localmente. Será sincronizado com o servidor quando a conexão for restabelecida.");
+      }
       
-      toast.success("Checklist salvo com sucesso!");
-      console.log('Checklist salvo:', result);
+      // Redirecionar para a página inicial após salvar
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
     } catch (error) {
       toast.error("Erro ao salvar o checklist!");
       console.error('Erro ao salvar checklist:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -170,8 +191,9 @@ const ChecklistForm = ({ initialEquipment, initialOperator }: ChecklistFormProps
           <Button 
             onClick={saveChecklistData}
             className="w-full bg-[#8B0000] hover:bg-[#6B0000] text-lg py-6"
+            disabled={isSaving}
           >
-            Salvar Checklist
+            {isSaving ? 'Salvando...' : 'Salvar Checklist'}
           </Button>
         </div>
       </div>
