@@ -25,7 +25,7 @@ const ServerConnectionStatus = () => {
   useEffect(() => {
     checkConnection();
     
-    // Verificar a conexão a cada 5 minutos
+    // Check connection every 5 minutes
     const interval = setInterval(checkConnection, 300000);
     
     return () => clearInterval(interval);

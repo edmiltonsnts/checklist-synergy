@@ -5,7 +5,7 @@ import ChecklistForm from '@/components/ChecklistForm';
 import { getEquipments } from '@/services/checklistService';
 import { getOperators } from '@/services/operatorsService';
 import { Equipment, Operator } from '@/types/checklist';
-import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -72,7 +72,6 @@ const Checklist = () => {
   
   return (
     <div className="min-h-screen bg-slate-100 pt-4">
-      <Toaster />
       <div className="container mx-auto px-4">
         <Button 
           onClick={handleBack} 
@@ -82,24 +81,18 @@ const Checklist = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
         </Button>
         
-        <div className="bg-white p-4 mb-4 rounded-lg shadow">
-          <div className="flex flex-wrap justify-between">
-            <div className="mb-2">
-              <div className="text-sm text-gray-500">Equipamento:</div>
-              <div className="text-lg font-bold text-[#8B0000]">
-                {equipment?.id} - {equipment?.name}
-              </div>
-            </div>
-            <div className="mb-2">
-              <div className="text-sm text-gray-500">Operador:</div>
-              <div className="text-lg font-bold text-[#8B0000]">
-                {operator?.name} ({operator?.id})
-              </div>
-            </div>
-            <div className="mb-2">
-              <div className="text-sm text-gray-500">Setor:</div>
-              <div className="font-medium">{equipment?.sector}</div>
-            </div>
+        <div className="bg-white p-4 mb-6 rounded-lg shadow">
+          <div className="mb-2">
+            <div className="text-sm text-gray-500">Equipamento:</div>
+            <div className="font-medium">{equipment?.name}</div>
+          </div>
+          <div className="mb-2">
+            <div className="text-sm text-gray-500">Operador:</div>
+            <div className="font-medium">{operator?.name} ({operator?.id})</div>
+          </div>
+          <div className="mb-2">
+            <div className="text-sm text-gray-500">Setor:</div>
+            <div className="font-medium">{equipment?.sector}</div>
           </div>
         </div>
         
