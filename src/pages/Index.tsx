@@ -2,8 +2,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Settings, ClipboardList, FileDown } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ChevronRight, Settings } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -29,18 +28,6 @@ const Index = () => {
             <span>Iniciar Checklist</span>
             <ChevronRight className="h-5 w-5" />
           </Button>
-          
-          <Link to="/history" className="w-full">
-            <Button 
-              className="w-full h-14 bg-[#3B82F6] hover:bg-[#2563EB] text-lg flex justify-between items-center"
-            >
-              <span className="flex items-center">
-                <ClipboardList className="mr-2 h-5 w-5" />
-                Histórico de Checklists
-              </span>
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </Link>
           
           <Link to="/admin-login" className="w-full">
             <Button 

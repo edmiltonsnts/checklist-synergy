@@ -26,7 +26,7 @@ const App = () => (
           <Route path="/checklist" element={<Checklist />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/admin/history" element={<History />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

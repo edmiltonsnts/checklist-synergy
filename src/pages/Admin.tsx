@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -341,12 +340,21 @@ const Admin = () => {
           >
             <ArrowLeft className="h-4 w-4" /> Voltar
           </Button>
-          <Button 
-            onClick={handleSaveAll}
-            className="bg-[#8B0000] hover:bg-[#6B0000] gap-2"
-          >
-            <Save className="h-4 w-4" /> Salvar Alterações
-          </Button>
+          <div className="flex gap-2">
+            <Link to="/admin/history">
+              <Button 
+                className="bg-[#3B82F6] hover:bg-[#2563EB] gap-2"
+              >
+                <ClipboardList className="h-4 w-4" /> Histórico de Checklists
+              </Button>
+            </Link>
+            <Button 
+              onClick={handleSaveAll}
+              className="bg-[#8B0000] hover:bg-[#6B0000] gap-2"
+            >
+              <Save className="h-4 w-4" /> Salvar Alterações
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-6">

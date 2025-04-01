@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -40,7 +39,7 @@ const History = () => {
   };
 
   const handleBack = () => {
-    navigate('/');
+    navigate('/admin');
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +48,6 @@ const History = () => {
 
     importFromJson(file)
       .then((data) => {
-        // Se os dados importados forem um array, assumimos que são checklists
         if (Array.isArray(data)) {
           localStorage.setItem('checklist_history', JSON.stringify(data));
           loadHistory();
@@ -106,7 +104,7 @@ const History = () => {
             variant="outline" 
             className="gap-2"
           >
-            <ArrowLeft className="h-4 w-4" /> Voltar
+            <ArrowLeft className="h-4 w-4" /> Voltar para Admin
           </Button>
           
           <div className="flex gap-2">
