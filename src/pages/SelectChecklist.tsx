@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertTriangle, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,34 +18,52 @@ const SelectChecklist = () => {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      // Primeiro tenta buscar do servidor PostgreSQL
-      const equipmentsData = await getEquipmentsFromServer();
-      const operatorsData = await getOperatorsFromServer();
+      // Adiciona um timestamp para evitar cache
+      const timestamp = new Date().getTime();
+      
+      // Fetch equipamentos e operadores em paralelo
+      const [equipmentsData, operatorsData] = await Promise.all([
+        getEquipmentsFromServer(),
+        getOperatorsFromServer()
+      ]);
       
       console.log('Equipamentos carregados:', equipmentsData);
       console.log('Operadores carregados:', operatorsData);
+      
+      if (equipmentsData.length === 0) {
+        toast.warning('Nenhum equipamento encontrado no servidor');
+      }
+      
+      if (operatorsData.length === 0) {
+        toast.warning('Nenhum operador encontrado no servidor');
+      }
       
       setEquipments(equipmentsData);
       setOperators(operatorsData);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
+      setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
       toast.error('Erro ao carregar dados. Verifique a conexão com o banco de dados.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
+    toast.info('Atualizando dados do servidor...');
     fetchData();
   };
 
@@ -80,9 +98,32 @@ const SelectChecklist = () => {
           </Button>
         </div>
         
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-4 rounded-lg flex items-center">
+            <AlertTriangle className="h-5 w-5 mr-2" />
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-auto" 
+              onClick={handleRefresh}
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+        
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl text-[#8B0000]">Iniciar Checklist</CardTitle>
+            <CardTitle className="text-xl text-[#8B0000] flex items-center">
+              Iniciar Checklist
+              {!loading && !error && (equipments.length > 0 || operators.length > 0) && (
+                <span className="ml-2 text-sm font-normal text-green-600 flex items-center">
+                  <Database className="h-3 w-3 mr-1" />
+                  Dados carregados do servidor
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {loading ? (

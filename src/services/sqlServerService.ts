@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Checklist, ChecklistHistory, Equipment, Operator } from '@/types/checklist';
@@ -11,12 +10,14 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 10000 // Define um timeout de 10 segundos
 });
 
 // Método para salvar um checklist no PostgreSQL
 export const saveChecklistToServer = async (checklist: Checklist): Promise<Checklist> => {
   try {
+    console.log('Salvando checklist no servidor:', checklist);
     const response = await api.post('/checklists', checklist);
     toast.success('Checklist salvo no banco de dados com sucesso!');
     return response.data;
@@ -35,22 +36,40 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
 // Obter equipamentos do PostgreSQL
 export const getEquipmentsFromServer = async (): Promise<Equipment[]> => {
   try {
+    console.log('Buscando equipamentos do servidor...');
     const response = await api.get('/equipments');
+    console.log('Equipamentos recebidos do servidor:', response.data);
+    
+    if (!Array.isArray(response.data)) {
+      console.error('Resposta não é um array:', response.data);
+      throw new Error('Formato de resposta inválido');
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Erro ao buscar equipamentos do banco de dados:', error);
     toast.error('Falha ao buscar equipamentos do servidor. Usando dados locais.');
     
     // Fallback para dados locais
-    const { equipmentsList } = await import('./checklistService');
-    return equipmentsList;
+    const { getEquipments } = await import('./checklistService');
+    const localData = getEquipments();
+    console.log('Usando equipamentos locais:', localData);
+    return localData;
   }
 };
 
 // Obter operadores do PostgreSQL
 export const getOperatorsFromServer = async (): Promise<Operator[]> => {
   try {
+    console.log('Buscando operadores do servidor...');
     const response = await api.get('/operators');
+    console.log('Operadores recebidos do servidor:', response.data);
+    
+    if (!Array.isArray(response.data)) {
+      console.error('Resposta não é um array:', response.data);
+      throw new Error('Formato de resposta inválido');
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Erro ao buscar operadores do banco de dados:', error);
@@ -58,7 +77,9 @@ export const getOperatorsFromServer = async (): Promise<Operator[]> => {
     
     // Fallback para dados locais
     const { getOperators } = await import('./operatorsService');
-    return getOperators();
+    const localData = getOperators();
+    console.log('Usando operadores locais:', localData);
+    return localData;
   }
 };
 
