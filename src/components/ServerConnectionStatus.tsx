@@ -15,8 +15,11 @@ const ServerConnectionStatus = () => {
     try {
       await axios.get(`${API_URL}/health`);
       setIsConnected(true);
+      toast.success("Conectado ao banco de dados PostgreSQL");
     } catch (error) {
+      console.error("Erro de conexão com o banco de dados:", error);
       setIsConnected(false);
+      toast.error("Falha na conexão com o PostgreSQL");
     } finally {
       setChecking(false);
     }
@@ -32,7 +35,7 @@ const ServerConnectionStatus = () => {
   }, []);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-md">
       {isConnected === null ? (
         <Button variant="ghost" size="sm" disabled className="text-xs">
           <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
@@ -47,6 +50,7 @@ const ServerConnectionStatus = () => {
         <Button variant="ghost" size="sm" className="text-xs text-red-600" onClick={checkConnection} disabled={checking}>
           <WifiOff className="h-3 w-3 mr-1" />
           Desconectado do PostgreSQL
+          {checking ? <RefreshCw className="h-3 w-3 ml-1 animate-spin" /> : null}
         </Button>
       )}
     </div>

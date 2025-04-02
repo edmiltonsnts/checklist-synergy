@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChecklistForm from '@/components/ChecklistForm';
-import { getEquipments } from '@/services/checklistService';
-import { getOperators } from '@/services/operatorsService';
 import { Equipment, Operator } from '@/types/checklist';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { getEquipmentsFromServer, getOperatorsFromServer } from '@/services/sqlServerService';
 
 const Checklist = () => {
   const location = useLocation();
@@ -26,19 +25,23 @@ const Checklist = () => {
         const operatorId = searchParams.get('operatorId');
         
         if (!equipmentId || !operatorId) {
+          toast.error('Parâmetros inválidos');
           navigate('/');
           return;
         }
         
-        // Buscar detalhes do equipamento
-        const equipments = await getEquipments();
-        const selectedEquipment = equipments.find(e => e.id === equipmentId);
+        // Buscar equipamentos e operadores diretamente do servidor
+        const equipments = await getEquipmentsFromServer();
+        const operators = await getOperatorsFromServer();
         
-        // Buscar detalhes do operador
-        const operators = await getOperators();
+        console.log('Equipamentos carregados no checklist:', equipments);
+        console.log('Operadores carregados no checklist:', operators);
+        
+        const selectedEquipment = equipments.find(e => e.id === equipmentId);
         const selectedOperator = operators.find(o => o.id === operatorId);
         
         if (!selectedEquipment || !selectedOperator) {
+          toast.error('Equipamento ou operador não encontrado');
           navigate('/');
           return;
         }
@@ -47,6 +50,7 @@ const Checklist = () => {
         setOperator(selectedOperator);
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
+        toast.error('Erro ao carregar dados do checklist');
         navigate('/');
       } finally {
         setLoading(false);
@@ -64,6 +68,7 @@ const Checklist = () => {
     return (
       <div className="min-h-screen bg-slate-100 flex justify-center items-center">
         <Card className="p-8 text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-[#8B0000]" />
           <div className="text-xl">Carregando checklist...</div>
         </Card>
       </div>
