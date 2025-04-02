@@ -48,13 +48,41 @@ export const operatorsList: Operator[] = [
 
 // Número total de operadores seria muito grande, então adicionamos apenas uma parte representativa
 
+/**
+ * Obtém todos os operadores ordenados alfabeticamente
+ */
 export const getOperators = async (): Promise<Operator[]> => {
   // Simulando uma busca de operadores do banco de dados
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  return operatorsList;
+  // Retorna operadores ordenados por nome
+  return [...operatorsList].sort((a, b) => a.name.localeCompare(b.name));
 };
 
+/**
+ * Obtém um operador pelo ID
+ */
 export const getOperatorById = (id: string): Operator | undefined => {
   return operatorsList.find(operator => operator.id === id);
+};
+
+/**
+ * Pesquisa operadores por nome, ID ou setor
+ */
+export const searchOperators = (query: string): Operator[] => {
+  if (!query || query.trim() === '') {
+    return [...operatorsList].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  const searchTerm = query.toLowerCase().trim();
+  
+  const filteredOperators = operatorsList.filter(operator => 
+    operator.name.toLowerCase().includes(searchTerm) || 
+    operator.id.toLowerCase().includes(searchTerm) || 
+    operator.sector.toLowerCase().includes(searchTerm) ||
+    operator.role.toLowerCase().includes(searchTerm)
+  );
+  
+  // Retorna os resultados ordenados por nome
+  return filteredOperators.sort((a, b) => a.name.localeCompare(b.name));
 };

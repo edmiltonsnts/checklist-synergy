@@ -7,13 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar, Mail } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar, Mail, Search } from 'lucide-react';
 import { Equipment, Operator, Sector } from '@/types/checklist';
 import { getEquipments } from '@/services/checklistService';
-import { getOperators } from '@/services/operatorsService';
+import { getOperators, searchOperators } from '@/services/operatorsService';
 import { exportToJson, importFromJson } from '@/services/historyService';
 
-// Interface para item de checklist
 interface ChecklistTemplate {
   id: string;
   name: string;
@@ -23,7 +22,6 @@ interface ChecklistTemplate {
 const Admin = () => {
   const navigate = useNavigate();
 
-  // Estados para equipamentos
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [newEquipment, setNewEquipment] = useState<Partial<Equipment>>({
     id: '',
@@ -33,8 +31,9 @@ const Admin = () => {
     sector: ''
   });
 
-  // Estados para operadores
   const [operators, setOperators] = useState<Operator[]>([]);
+  const [filteredOperators, setFilteredOperators] = useState<Operator[]>([]);
+  const [operatorSearchQuery, setOperatorSearchQuery] = useState('');
   const [newOperator, setNewOperator] = useState<Partial<Operator>>({
     id: '',
     name: '',
@@ -42,7 +41,6 @@ const Admin = () => {
     sector: ''
   });
 
-  // Estados para setores
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [newSector, setNewSector] = useState<Partial<Sector>>({
     id: '',
@@ -50,7 +48,6 @@ const Admin = () => {
     email: ''
   });
 
-  // Estados para modelos de checklist
   const [checklists, setChecklists] = useState<ChecklistTemplate[]>([]);
   const [newChecklist, setNewChecklist] = useState<Partial<ChecklistTemplate>>({
     id: '',
@@ -60,27 +57,22 @@ const Admin = () => {
   const [newItem, setNewItem] = useState('');
   const [currentItems, setCurrentItems] = useState<{id: number; question: string}[]>([]);
 
-  // Estados para importação/exportação
   const [importType, setImportType] = useState<'equipments' | 'operators' | 'sectors' | 'checklists'>('equipments');
 
-  // Carregar dados
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Carregar equipamentos
         const equipmentsData = await getEquipments();
         setEquipments(equipmentsData);
 
-        // Carregar operadores
         const operatorsData = await getOperators();
         setOperators(operatorsData);
+        setFilteredOperators(operatorsData);
 
-        // Carregar setores do localStorage (ou mock)
         const storedSectors = localStorage.getItem('sectors');
         if (storedSectors) {
           setSectors(JSON.parse(storedSectors));
         } else {
-          // Mock de setores iniciais
           const sectorsData = [
             { id: '1', name: 'Produção', email: 'producao@empresa.com' },
             { id: '2', name: 'Manutenção', email: 'manutencao@empresa.com' },
@@ -90,12 +82,10 @@ const Admin = () => {
           localStorage.setItem('sectors', JSON.stringify(sectorsData));
         }
 
-        // Carregar checklists do localStorage (ou mock)
         const storedChecklists = localStorage.getItem('checklist_templates');
         if (storedChecklists) {
           setChecklists(JSON.parse(storedChecklists));
         } else {
-          // Mock de checklist inicial
           const checklistsData = [
             { 
               id: '1', 
@@ -109,7 +99,6 @@ const Admin = () => {
           setChecklists(checklistsData);
           localStorage.setItem('checklist_templates', JSON.stringify(checklistsData));
         }
-
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         toast.error('Erro ao carregar dados');
@@ -119,7 +108,6 @@ const Admin = () => {
     fetchData();
   }, []);
 
-  // Funções para equipamentos
   const handleAddEquipment = () => {
     if (!newEquipment.id || !newEquipment.name || !newEquipment.sector) {
       toast.error('Preencha os campos obrigatórios');
@@ -148,7 +136,6 @@ const Admin = () => {
     toast.success('Equipamento removido com sucesso');
   };
 
-  // Funções para operadores
   const handleAddOperator = () => {
     if (!newOperator.id || !newOperator.name) {
       toast.error('Preencha os campos obrigatórios');
@@ -163,8 +150,11 @@ const Admin = () => {
 
     const operatorToAdd = { ...newOperator } as Operator;
     const updatedOperators = [...operators, operatorToAdd];
-    setOperators(updatedOperators);
-    localStorage.setItem('operators', JSON.stringify(updatedOperators));
+    const sortedOperators = updatedOperators.sort((a, b) => a.name.localeCompare(b.name));
+    
+    setOperators(sortedOperators);
+    setFilteredOperators(sortedOperators);
+    localStorage.setItem('operators', JSON.stringify(sortedOperators));
     
     setNewOperator({ id: '', name: '', role: '', sector: '' });
     toast.success('Operador adicionado com sucesso');
@@ -173,11 +163,28 @@ const Admin = () => {
   const handleDeleteOperator = (id: string) => {
     const updatedOperators = operators.filter(o => o.id !== id);
     setOperators(updatedOperators);
+    setFilteredOperators(updatedOperators.filter(o => 
+      o.name.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+      o.id.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+      o.sector.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+      o.role.toLowerCase().includes(operatorSearchQuery.toLowerCase())
+    ));
     localStorage.setItem('operators', JSON.stringify(updatedOperators));
     toast.success('Operador removido com sucesso');
   };
 
-  // Funções para setores
+  const handleSearchOperator = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setOperatorSearchQuery(query);
+    
+    if (!query.trim()) {
+      setFilteredOperators(operators);
+    } else {
+      const results = searchOperators(query);
+      setFilteredOperators(results);
+    }
+  };
+
   const handleAddSector = () => {
     if (!newSector.id || !newSector.name) {
       toast.error('Preencha os campos obrigatórios');
@@ -206,7 +213,6 @@ const Admin = () => {
     toast.success('Setor removido com sucesso');
   };
 
-  // Funções para checklists
   const handleAddItem = () => {
     if (!newItem) {
       toast.error('Digite um item para adicionar');
@@ -255,7 +261,6 @@ const Admin = () => {
     toast.success('Checklist removido com sucesso');
   };
 
-  // Funções para importação/exportação
   const handleExportData = (type: 'equipments' | 'operators' | 'sectors' | 'checklists') => {
     let data: any;
     switch (type) {
@@ -314,12 +319,10 @@ const Admin = () => {
       });
   };
 
-  // Voltar para a página inicial
   const handleBack = () => {
     navigate('/');
   };
 
-  // Salvar todas as alterações
   const handleSaveAll = () => {
     localStorage.setItem('equipments', JSON.stringify(equipments));
     localStorage.setItem('operators', JSON.stringify(operators));
@@ -431,7 +434,6 @@ const Admin = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Aba de Equipamentos */}
           <TabsContent value="equipments">
             <Card>
               <CardHeader>
@@ -545,7 +547,6 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          {/* Aba de Operadores */}
           <TabsContent value="operators">
             <Card>
               <CardHeader>
@@ -603,52 +604,63 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Matrícula</TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Função</TableHead>
-                          <TableHead>Setor</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {operators.map((operator) => (
-                          <TableRow key={operator.id}>
-                            <TableCell>{operator.id}</TableCell>
-                            <TableCell>{operator.name}</TableCell>
-                            <TableCell>{operator.role}</TableCell>
-                            <TableCell>{operator.sector}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleDeleteOperator(operator.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {operators.length === 0 && (
+                  <div className="relative">
+                    <div className="flex items-center border rounded-md px-3 py-2 mb-4">
+                      <Search className="h-4 w-4 mr-2 text-gray-500" />
+                      <Input 
+                        placeholder="Pesquisar operadores por nome, matrícula ou setor..." 
+                        value={operatorSearchQuery}
+                        onChange={handleSearchOperator}
+                        className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                    
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-4 text-gray-500">
-                              Nenhum operador cadastrado
-                            </TableCell>
+                            <TableHead>Matrícula</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Função</TableHead>
+                            <TableHead>Setor</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredOperators.map((operator) => (
+                            <TableRow key={operator.id}>
+                              <TableCell>{operator.id}</TableCell>
+                              <TableCell>{operator.name}</TableCell>
+                              <TableCell>{operator.role}</TableCell>
+                              <TableCell>{operator.sector}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleDeleteOperator(operator.id)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {filteredOperators.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                                {operatorSearchQuery ? 'Nenhum operador encontrado para esta pesquisa' : 'Nenhum operador cadastrado'}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Aba de Setores */}
           <TabsContent value="sectors">
             <Card>
               <CardHeader>
@@ -741,7 +753,6 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          {/* Aba de Checklists */}
           <TabsContent value="checklists">
             <Card>
               <CardHeader>

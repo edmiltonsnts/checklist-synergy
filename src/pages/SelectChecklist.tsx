@@ -2,19 +2,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw, AlertTriangle, Database } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertTriangle, Database, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Equipment, Operator } from '@/types/checklist';
 import { getEquipmentsFromServer, getOperatorsFromServer } from '@/services/sqlServerService';
+import { searchOperators } from '@/services/operatorsService';
 
 const SelectChecklist = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
+  const [filteredOperators, setFilteredOperators] = useState<Operator[]>([]);
+  const [operatorSearchQuery, setOperatorSearchQuery] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
@@ -45,8 +49,12 @@ const SelectChecklist = () => {
         toast.warning('Nenhum operador encontrado no servidor');
       }
       
+      // Ordenar operadores por nome
+      const sortedOperators = [...operatorsData].sort((a, b) => a.name.localeCompare(b.name));
+      
       setEquipments(equipmentsData);
-      setOperators(operatorsData);
+      setOperators(sortedOperators);
+      setFilteredOperators(sortedOperators);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
@@ -75,6 +83,23 @@ const SelectChecklist = () => {
     
     // Navigate to checklist page with the selected equipment and operator
     navigate(`/checklist?equipmentId=${selectedEquipmentId}&operatorId=${selectedOperatorId}`);
+  };
+
+  const handleSearchOperator = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setOperatorSearchQuery(query);
+    
+    if (!query.trim()) {
+      setFilteredOperators(operators);
+    } else {
+      const results = operators.filter(operator => 
+        operator.name.toLowerCase().includes(query.toLowerCase()) ||
+        operator.id.toLowerCase().includes(query.toLowerCase()) ||
+        operator.sector.toLowerCase().includes(query.toLowerCase()) ||
+        operator.role?.toLowerCase().includes(query.toLowerCase() || '')
+      );
+      setFilteredOperators(results);
+    }
   };
 
   return (
@@ -167,6 +192,17 @@ const SelectChecklist = () => {
                 ) : (
                   <div className="space-y-2">
                     <Label htmlFor="operator">Operador ({operators.length} disponíveis)</Label>
+                    
+                    <div className="flex items-center border rounded-md px-3 py-2 mb-4">
+                      <Search className="h-4 w-4 mr-2 text-gray-500" />
+                      <Input 
+                        placeholder="Pesquisar operadores por nome ou matrícula..." 
+                        value={operatorSearchQuery}
+                        onChange={handleSearchOperator}
+                        className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                    
                     <Select 
                       value={selectedOperatorId} 
                       onValueChange={setSelectedOperatorId}
@@ -174,12 +210,17 @@ const SelectChecklist = () => {
                       <SelectTrigger id="operator">
                         <SelectValue placeholder="Selecione o operador" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {operators.map((operator) => (
+                      <SelectContent className="max-h-[300px]">
+                        {filteredOperators.map((operator) => (
                           <SelectItem key={operator.id} value={operator.id}>
                             {operator.name} ({operator.id})
                           </SelectItem>
                         ))}
+                        {filteredOperators.length === 0 && (
+                          <div className="px-2 py-4 text-center text-sm text-gray-500">
+                            Nenhum operador encontrado para "{operatorSearchQuery}"
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
