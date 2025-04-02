@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Equipment, Operator } from '@/types/checklist';
 import { getEquipmentsFromServer, getOperatorsFromServer } from '@/services/sqlServerService';
 import { searchOperators } from '@/services/operatorsService';
+import OperatorSearchCommand from '@/components/OperatorSearchCommand';
 
 const SelectChecklist = () => {
   const navigate = useNavigate();
@@ -92,14 +93,13 @@ const SelectChecklist = () => {
     if (!query.trim()) {
       setFilteredOperators(operators);
     } else {
-      const results = operators.filter(operator => 
-        operator.name.toLowerCase().includes(query.toLowerCase()) ||
-        operator.id.toLowerCase().includes(query.toLowerCase()) ||
-        operator.sector.toLowerCase().includes(query.toLowerCase()) ||
-        operator.role?.toLowerCase().includes(query.toLowerCase() || '')
-      );
+      const results = searchOperators(query);
       setFilteredOperators(results);
     }
+  };
+
+  const handleSelectOperator = (operator: Operator) => {
+    setSelectedOperatorId(operator.id);
   };
 
   return (
@@ -193,13 +193,10 @@ const SelectChecklist = () => {
                   <div className="space-y-2">
                     <Label htmlFor="operator">Operador ({operators.length} disponíveis)</Label>
                     
-                    <div className="flex items-center border rounded-md px-3 py-2 mb-4">
-                      <Search className="h-4 w-4 mr-2 text-gray-500" />
-                      <Input 
-                        placeholder="Pesquisar operadores por nome ou matrícula..." 
-                        value={operatorSearchQuery}
-                        onChange={handleSearchOperator}
-                        className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    <div className="mb-4">
+                      <OperatorSearchCommand 
+                        operators={operators}
+                        onSelect={handleSelectOperator}
                       />
                     </div>
                     
@@ -211,16 +208,11 @@ const SelectChecklist = () => {
                         <SelectValue placeholder="Selecione o operador" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
-                        {filteredOperators.map((operator) => (
+                        {operators.map((operator) => (
                           <SelectItem key={operator.id} value={operator.id}>
                             {operator.name} ({operator.id})
                           </SelectItem>
                         ))}
-                        {filteredOperators.length === 0 && (
-                          <div className="px-2 py-4 text-center text-sm text-gray-500">
-                            Nenhum operador encontrado para "{operatorSearchQuery}"
-                          </div>
-                        )}
                       </SelectContent>
                     </Select>
                   </div>

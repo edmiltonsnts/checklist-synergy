@@ -67,7 +67,8 @@ export const getOperatorById = (id: string): Operator | undefined => {
 };
 
 /**
- * Pesquisa operadores por nome, ID ou setor
+ * Pesquisa operadores por nome, ID, setor ou função
+ * Retorna sempre em ordem alfabética
  */
 export const searchOperators = (query: string): Operator[] => {
   if (!query || query.trim() === '') {
@@ -80,7 +81,7 @@ export const searchOperators = (query: string): Operator[] => {
     operator.name.toLowerCase().includes(searchTerm) || 
     operator.id.toLowerCase().includes(searchTerm) || 
     operator.sector.toLowerCase().includes(searchTerm) ||
-    operator.role.toLowerCase().includes(searchTerm)
+    (operator.role && operator.role.toLowerCase().includes(searchTerm))
   );
   
   // Retorna os resultados ordenados por nome
