@@ -41,12 +41,12 @@ const ServerConnectionStatus = () => {
       ) : isConnected ? (
         <Button variant="ghost" size="sm" className="text-xs text-green-600" onClick={checkConnection} disabled={checking}>
           <Database className="h-3 w-3 mr-1" />
-          Conectado ao SQL Server
+          Conectado ao PostgreSQL
         </Button>
       ) : (
         <Button variant="ghost" size="sm" className="text-xs text-red-600" onClick={checkConnection} disabled={checking}>
           <WifiOff className="h-3 w-3 mr-1" />
-          Desconectado do SQL Server
+          Desconectado do PostgreSQL
         </Button>
       )}
     </div>
