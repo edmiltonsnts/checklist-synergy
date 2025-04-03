@@ -30,9 +30,9 @@ const Checklist = () => {
           return;
         }
         
-        // Buscar equipamentos e operadores diretamente do servidor
-        const equipments = await getEquipmentsFromServer();
-        const operators = await getOperatorsFromServer();
+        // Buscar equipamentos e operadores diretamente do servidor com forceRefresh=true
+        const equipments = await getEquipmentsFromServer(true);
+        const operators = await getOperatorsFromServer(true);
         
         console.log('Equipamentos carregados no checklist:', equipments);
         console.log('Operadores carregados no checklist:', operators);

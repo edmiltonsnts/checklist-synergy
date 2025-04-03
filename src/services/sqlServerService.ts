@@ -1,6 +1,7 @@
+
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Checklist, ChecklistHistory, Equipment, Operator } from '@/types/checklist';
+import { Checklist, ChecklistHistory, Equipment, Operator, Sector, Employee } from '@/types/checklist';
 
 // URL base da API backend que se conecta ao PostgreSQL
 export const API_URL = 'http://172.16.2.94:3000/api';
@@ -34,10 +35,12 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
 };
 
 // Obter equipamentos do PostgreSQL
-export const getEquipmentsFromServer = async (): Promise<Equipment[]> => {
+export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equipment[]> => {
   try {
+    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
+    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
     console.log('Buscando equipamentos do servidor...');
-    const response = await api.get('/equipments');
+    const response = await api.get(`/equipments${timestamp}`);
     console.log('Equipamentos recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -52,17 +55,19 @@ export const getEquipmentsFromServer = async (): Promise<Equipment[]> => {
     
     // Fallback para dados locais
     const { getEquipments } = await import('./checklistService');
-    const localData = getEquipments();
+    const localData = await getEquipments();
     console.log('Usando equipamentos locais:', localData);
     return localData;
   }
 };
 
 // Obter operadores do PostgreSQL
-export const getOperatorsFromServer = async (): Promise<Operator[]> => {
+export const getOperatorsFromServer = async (forceRefresh = false): Promise<Operator[]> => {
   try {
+    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
+    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
     console.log('Buscando operadores do servidor...');
-    const response = await api.get('/operators');
+    const response = await api.get(`/operators${timestamp}`);
     console.log('Operadores recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -77,9 +82,31 @@ export const getOperatorsFromServer = async (): Promise<Operator[]> => {
     
     // Fallback para dados locais
     const { getOperators } = await import('./operatorsService');
-    const localData = getOperators();
+    const localData = await getOperators();
     console.log('Usando operadores locais:', localData);
     return localData;
+  }
+};
+
+// Obter setores do PostgreSQL
+export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector[]> => {
+  try {
+    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
+    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
+    console.log('Buscando setores do servidor...');
+    const response = await api.get(`/sectors${timestamp}`);
+    console.log('Setores recebidos do servidor:', response.data);
+    
+    if (!Array.isArray(response.data)) {
+      console.error('Resposta não é um array:', response.data);
+      throw new Error('Formato de resposta inválido');
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar setores do banco de dados:', error);
+    toast.error('Falha ao buscar setores do servidor.');
+    return [];
   }
 };
 
@@ -113,3 +140,4 @@ export const syncLocalHistoryWithServer = async (): Promise<void> => {
     toast.error('Falha ao sincronizar dados com o servidor');
   }
 };
+

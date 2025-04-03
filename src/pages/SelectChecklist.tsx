@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,18 +24,15 @@ const SelectChecklist = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Adiciona um timestamp para evitar cache
-      const timestamp = new Date().getTime();
-      
-      // Fetch equipamentos e operadores em paralelo
+      // Fetch equipamentos e operadores em paralelo com forceRefresh para evitar cache
       const [equipmentsData, operatorsData] = await Promise.all([
-        getEquipmentsFromServer(),
-        getOperatorsFromServer()
+        getEquipmentsFromServer(forceRefresh),
+        getOperatorsFromServer(forceRefresh)
       ]);
       
       console.log('Equipamentos carregados:', equipmentsData);
@@ -73,7 +69,7 @@ const SelectChecklist = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     toast.info('Atualizando dados do servidor...');
-    fetchData();
+    fetchData(true); // Passa true para forceRefresh
   };
 
   const handleStartChecklist = () => {
