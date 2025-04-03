@@ -31,7 +31,8 @@ const OperatorSearchCommand: React.FC<OperatorSearchCommandProps> = ({
     if (query) {
       setResults(searchOperators(query));
     } else {
-      setResults(operators);
+      // Ensure operators are always sorted alphabetically
+      setResults([...operators].sort((a, b) => a.name.localeCompare(b.name)));
     }
   }, [query, operators]);
 

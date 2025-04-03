@@ -1,8 +1,9 @@
 
-import { ChecklistHistory } from '@/types/checklist';
+import { ChecklistHistory, Sector } from '@/types/checklist';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { API_URL } from './sqlServerService';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -75,17 +76,12 @@ export const savePDF = (checklist: ChecklistHistory): void => {
   }
 };
 
-export const sendEmailWithPDF = (checklist: ChecklistHistory, email: string): void => {
-  // Esta é uma simulação, em um cenário real você enviaria para o seu backend
-  toast.success(`Email seria enviado para ${email} com o PDF do checklist`);
-  
-  // Em uma implementação real, você enviaria o PDF para um endpoint no backend:
-  /*
+export const sendEmailWithPDF = async (checklist: ChecklistHistory, email: string): Promise<boolean> => {
   try {
     const doc = generatePDF(checklist);
     const pdfBase64 = doc.output('datauristring');
     
-    fetch('/api/send-email', {
+    const response = await fetch(`${API_URL}/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -98,9 +94,38 @@ export const sendEmailWithPDF = (checklist: ChecklistHistory, email: string): vo
         date: checklist.date
       })
     });
+    
+    if (response.ok) {
+      toast.success(`Email enviado com sucesso para ${email}`);
+      return true;
+    } else {
+      const errorData = await response.json();
+      console.error('Erro ao enviar e-mail:', errorData);
+      toast.error(`Erro ao enviar e-mail: ${errorData.message || 'Erro desconhecido'}`);
+      return false;
+    }
   } catch (error) {
     console.error('Erro ao enviar e-mail:', error);
-    toast.error('Erro ao enviar e-mail');
+    toast.error('Erro ao enviar e-mail. Verifique a conexão com o servidor.');
+    return false;
   }
-  */
+};
+
+// Enviar automaticamente o PDF para o email do setor
+export const sendChecklistToSectorEmail = async (checklist: ChecklistHistory, sectors: Sector[]): Promise<boolean> => {
+  try {
+    // Encontrar o setor correspondente
+    const sectorData = sectors.find(s => s.name === checklist.sector);
+    
+    if (!sectorData || !sectorData.email) {
+      toast.error(`Não foi possível enviar o e-mail: Setor ${checklist.sector} não possui e-mail cadastrado`);
+      return false;
+    }
+    
+    return await sendEmailWithPDF(checklist, sectorData.email);
+  } catch (error) {
+    console.error('Erro ao enviar checklist para o setor:', error);
+    toast.error('Erro ao processar o envio do checklist');
+    return false;
+  }
 };
