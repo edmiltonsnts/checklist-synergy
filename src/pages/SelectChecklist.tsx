@@ -28,6 +28,7 @@ const SelectChecklist = () => {
     
     try {
       console.log('Buscando dados atualizados às', new Date().toLocaleTimeString());
+      toast.info('Atualizando dados do servidor...');
       
       // Sempre forçar refresh para garantir dados atualizados
       const [equipmentsData, operatorsData] = await Promise.all([
@@ -52,6 +53,7 @@ const SelectChecklist = () => {
       setEquipments(equipmentsData);
       setOperators(sortedOperators);
       setLastRefresh(new Date());
+      toast.success(`Dados atualizados com sucesso! (${new Date().toLocaleTimeString()})`);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
@@ -62,15 +64,38 @@ const SelectChecklist = () => {
     }
   }, []);
 
+  // Função para limpar o cache do navegador para esta página
+  const clearBrowserCache = useCallback(() => {
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.delete(name);
+        });
+      });
+    }
+  }, []);
+
   useEffect(() => {
+    // Limpar cache ao montar o componente
+    clearBrowserCache();
+    
     // Iniciar busca ao montar o componente
     fetchData();
-  }, [fetchData]);
+    
+    // Configurar um intervalo para atualizar os dados a cada 30 segundos
+    const intervalId = setInterval(() => {
+      console.log('Atualizando dados automaticamente...');
+      fetchData();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [fetchData, clearBrowserCache]);
 
   const handleRefresh = () => {
     setRefreshing(true);
     setSelectedEquipmentId('');
     setSelectedOperatorId('');
+    clearBrowserCache();
     toast.info('Atualizando dados do servidor...');
     fetchData();
   };
@@ -82,7 +107,7 @@ const SelectChecklist = () => {
     }
     
     // Navigate to checklist page with the selected equipment and operator
-    navigate(`/checklist?equipmentId=${selectedEquipmentId}&operatorId=${selectedOperatorId}`);
+    navigate(`/checklist?equipmentId=${selectedEquipmentId}&operatorId=${selectedOperatorId}&t=${Date.now()}`);
   };
 
   const handleSelectOperator = (operator: Operator) => {

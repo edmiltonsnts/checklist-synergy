@@ -10,7 +10,10 @@ export const API_URL = 'http://172.16.2.94:3000/api';
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   },
   timeout: 10000 // Define um timeout de 10 segundos
 });
@@ -34,7 +37,7 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
   }
 };
 
-// Obter equipamentos do PostgreSQL
+// Obter equipamentos do PostgreSQL com força bruta anti-cache
 export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equipment[]> => {
   try {
     // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
@@ -42,7 +45,24 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
     const randomParam = Math.random().toString(36).substring(7);
     console.log(`Buscando equipamentos do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/equipments?t=${timestamp}&r=${randomParam}`);
+    // Vamos fazer uma requisição completamente nova a cada vez
+    const response = await axios({
+      method: 'get',
+      url: `${API_URL}/equipments`,
+      params: {
+        t: timestamp,
+        r: randomParam,
+        forceRefresh: true
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      timeout: 10000
+    });
+    
     console.log('Equipamentos recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -63,7 +83,7 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
   }
 };
 
-// Obter operadores do PostgreSQL
+// Obter operadores do PostgreSQL com força bruta anti-cache
 export const getOperatorsFromServer = async (forceRefresh = false): Promise<Operator[]> => {
   try {
     // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
@@ -71,7 +91,24 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
     const randomParam = Math.random().toString(36).substring(7);
     console.log(`Buscando operadores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/operators?t=${timestamp}&r=${randomParam}`);
+    // Vamos fazer uma requisição completamente nova a cada vez
+    const response = await axios({
+      method: 'get',
+      url: `${API_URL}/operators`,
+      params: {
+        t: timestamp,
+        r: randomParam,
+        forceRefresh: true
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      timeout: 10000
+    });
+    
     console.log('Operadores recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -100,7 +137,23 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
     const randomParam = Math.random().toString(36).substring(7);
     console.log(`Buscando setores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/sectors?t=${timestamp}&r=${randomParam}`);
+    const response = await axios({
+      method: 'get',
+      url: `${API_URL}/sectors`,
+      params: {
+        t: timestamp,
+        r: randomParam,
+        forceRefresh: true
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      timeout: 10000
+    });
+    
     console.log('Setores recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {

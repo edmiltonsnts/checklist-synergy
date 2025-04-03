@@ -16,9 +16,24 @@ const Checklist = () => {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [operator, setOperator] = useState<Operator | null>(null);
   
+  // Função para limpar o cache do navegador para esta página
+  const clearBrowserCache = () => {
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.delete(name);
+        });
+      });
+    }
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      
+      // Limpar qualquer cache do navegador
+      clearBrowserCache();
+      
       try {
         const searchParams = new URLSearchParams(location.search);
         const equipmentId = searchParams.get('equipmentId');
@@ -31,6 +46,7 @@ const Checklist = () => {
         }
         
         console.log('Buscando dados para checklist - equipmentId:', equipmentId, 'operatorId:', operatorId);
+        toast.info('Carregando dados atualizados do servidor...');
         
         // Usar timestamp aleatório para garantir dados atualizados a cada requisição
         const timestamp = Date.now();
@@ -58,6 +74,7 @@ const Checklist = () => {
         
         setEquipment(selectedEquipment);
         setOperator(selectedOperator);
+        toast.success('Dados carregados com sucesso!');
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error('Erro ao carregar dados do checklist');
@@ -69,6 +86,23 @@ const Checklist = () => {
     
     fetchData();
   }, [location.search, navigate]);
+  
+  const handleRefresh = async () => {
+    setLoading(true);
+    toast.info('Atualizando dados...');
+    
+    // Recarregar a página com parâmetro de timestamp único para forçar nova busca
+    const searchParams = new URLSearchParams(location.search);
+    const equipmentId = searchParams.get('equipmentId');
+    const operatorId = searchParams.get('operatorId');
+    
+    if (!equipmentId || !operatorId) {
+      navigate('/select-checklist');
+      return;
+    }
+    
+    navigate(`/checklist?equipmentId=${equipmentId}&operatorId=${operatorId}&t=${Date.now()}`);
+  };
   
   const handleBack = () => {
     navigate('/select-checklist');
@@ -88,13 +122,21 @@ const Checklist = () => {
   return (
     <div className="min-h-screen bg-slate-100 pt-4">
       <div className="container mx-auto px-4">
-        <Button 
-          onClick={handleBack} 
-          variant="outline" 
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-        </Button>
+        <div className="flex justify-between items-center mb-4">
+          <Button 
+            onClick={handleBack} 
+            variant="outline"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+          </Button>
+          
+          <Button 
+            onClick={handleRefresh} 
+            variant="outline"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar dados
+          </Button>
+        </div>
         
         <div className="bg-white p-4 mb-6 rounded-lg shadow">
           <div className="mb-2">
