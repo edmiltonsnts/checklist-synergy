@@ -30,19 +30,24 @@ const Checklist = () => {
           return;
         }
         
-        // Buscar equipamentos e operadores diretamente do servidor com forceRefresh=true
+        console.log('Buscando dados para checklist - equipmentId:', equipmentId, 'operatorId:', operatorId);
+        
+        // Sempre usar forceRefresh=true para garantir dados atualizados
         const equipments = await getEquipmentsFromServer(true);
         const operators = await getOperatorsFromServer(true);
         
-        console.log('Equipamentos carregados no checklist:', equipments);
-        console.log('Operadores carregados no checklist:', operators);
+        console.log('Equipamentos carregados no checklist:', equipments.length);
+        console.log('Operadores carregados no checklist:', operators.length);
         
         const selectedEquipment = equipments.find(e => e.id === equipmentId);
         const selectedOperator = operators.find(o => o.id === operatorId);
         
+        console.log('Equipamento encontrado:', selectedEquipment);
+        console.log('Operador encontrado:', selectedOperator);
+        
         if (!selectedEquipment || !selectedOperator) {
           toast.error('Equipamento ou operador não encontrado');
-          navigate('/');
+          navigate('/select-checklist');
           return;
         }
         
@@ -51,7 +56,7 @@ const Checklist = () => {
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error('Erro ao carregar dados do checklist');
-        navigate('/');
+        navigate('/select-checklist');
       } finally {
         setLoading(false);
       }
@@ -61,7 +66,7 @@ const Checklist = () => {
   }, [location.search, navigate]);
   
   const handleBack = () => {
-    navigate('/');
+    navigate('/select-checklist');
   };
   
   if (loading) {

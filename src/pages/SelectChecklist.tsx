@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,11 +6,9 @@ import { ArrowLeft, RefreshCw, AlertTriangle, Database, Search } from 'lucide-re
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Equipment, Operator } from '@/types/checklist';
 import { getEquipmentsFromServer, getOperatorsFromServer } from '@/services/sqlServerService';
-import { searchOperators } from '@/services/operatorsService';
 import OperatorSearchCommand from '@/components/OperatorSearchCommand';
 
 const SelectChecklist = () => {
@@ -17,26 +16,26 @@ const SelectChecklist = () => {
   const [loading, setLoading] = useState(true);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
-  const [filteredOperators, setFilteredOperators] = useState<Operator[]>([]);
-  const [operatorSearchQuery, setOperatorSearchQuery] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (forceRefresh = false) => {
+  const fetchData = useCallback(async (forceRefresh = true) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Fetch equipamentos e operadores em paralelo com forceRefresh para evitar cache
+      console.log('Buscando dados com forceRefresh =', forceRefresh);
+      
+      // Sempre passar true para forceRefresh para evitar problemas de cache
       const [equipmentsData, operatorsData] = await Promise.all([
         getEquipmentsFromServer(forceRefresh),
         getOperatorsFromServer(forceRefresh)
       ]);
       
-      console.log('Equipamentos carregados:', equipmentsData);
-      console.log('Operadores carregados:', operatorsData);
+      console.log('Equipamentos carregados:', equipmentsData.length);
+      console.log('Operadores carregados:', operatorsData.length);
       
       if (equipmentsData.length === 0) {
         toast.warning('Nenhum equipamento encontrado no servidor');
@@ -51,7 +50,6 @@ const SelectChecklist = () => {
       
       setEquipments(equipmentsData);
       setOperators(sortedOperators);
-      setFilteredOperators(sortedOperators);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
@@ -63,13 +61,16 @@ const SelectChecklist = () => {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    // Iniciar com forceRefresh=true para garantir dados atualizados
+    fetchData(true);
   }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
+    setSelectedEquipmentId('');
+    setSelectedOperatorId('');
     toast.info('Atualizando dados do servidor...');
-    fetchData(true); // Passa true para forceRefresh
+    fetchData(true); // Sempre passa true para forceRefresh
   };
 
   const handleStartChecklist = () => {
@@ -80,18 +81,6 @@ const SelectChecklist = () => {
     
     // Navigate to checklist page with the selected equipment and operator
     navigate(`/checklist?equipmentId=${selectedEquipmentId}&operatorId=${selectedOperatorId}`);
-  };
-
-  const handleSearchOperator = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setOperatorSearchQuery(query);
-    
-    if (!query.trim()) {
-      setFilteredOperators(operators);
-    } else {
-      const results = searchOperators(query);
-      setFilteredOperators(results);
-    }
   };
 
   const handleSelectOperator = (operator: Operator) => {

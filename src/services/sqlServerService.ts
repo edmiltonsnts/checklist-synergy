@@ -37,9 +37,10 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
 // Obter equipamentos do PostgreSQL
 export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equipment[]> => {
   try {
-    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
-    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
-    console.log('Buscando equipamentos do servidor...');
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
+    const timestamp = `?t=${new Date().getTime()}`;
+    console.log('Buscando equipamentos do servidor com timestamp:', timestamp);
+    
     const response = await api.get(`/equipments${timestamp}`);
     console.log('Equipamentos recebidos do servidor:', response.data);
     
@@ -64,9 +65,10 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
 // Obter operadores do PostgreSQL
 export const getOperatorsFromServer = async (forceRefresh = false): Promise<Operator[]> => {
   try {
-    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
-    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
-    console.log('Buscando operadores do servidor...');
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
+    const timestamp = `?t=${new Date().getTime()}`;
+    console.log('Buscando operadores do servidor com timestamp:', timestamp);
+    
     const response = await api.get(`/operators${timestamp}`);
     console.log('Operadores recebidos do servidor:', response.data);
     
@@ -91,9 +93,10 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
 // Obter setores do PostgreSQL
 export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector[]> => {
   try {
-    // Adiciona um parâmetro de timestamp para evitar cache se forceRefresh for true
-    const timestamp = forceRefresh ? `?t=${new Date().getTime()}` : '';
-    console.log('Buscando setores do servidor...');
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
+    const timestamp = `?t=${new Date().getTime()}`;
+    console.log('Buscando setores do servidor com timestamp:', timestamp);
+    
     const response = await api.get(`/sectors${timestamp}`);
     console.log('Setores recebidos do servidor:', response.data);
     
