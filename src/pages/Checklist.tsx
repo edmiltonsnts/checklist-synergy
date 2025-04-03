@@ -32,6 +32,11 @@ const Checklist = () => {
         
         console.log('Buscando dados para checklist - equipmentId:', equipmentId, 'operatorId:', operatorId);
         
+        // Usar timestamp aleatório para garantir dados atualizados a cada requisição
+        const timestamp = Date.now();
+        const randomParam = Math.random().toString(36).substring(7);
+        console.log(`Requisição com timestamp: ${timestamp} e random: ${randomParam}`);
+        
         // Sempre usar forceRefresh=true para garantir dados atualizados
         const equipments = await getEquipmentsFromServer(true);
         const operators = await getOperatorsFromServer(true);

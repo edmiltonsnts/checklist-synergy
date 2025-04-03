@@ -20,18 +20,19 @@ const SelectChecklist = () => {
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  const fetchData = useCallback(async (forceRefresh = true) => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Buscando dados com forceRefresh =', forceRefresh);
+      console.log('Buscando dados atualizados às', new Date().toLocaleTimeString());
       
-      // Sempre passar true para forceRefresh para evitar problemas de cache
+      // Sempre forçar refresh para garantir dados atualizados
       const [equipmentsData, operatorsData] = await Promise.all([
-        getEquipmentsFromServer(forceRefresh),
-        getOperatorsFromServer(forceRefresh)
+        getEquipmentsFromServer(true),
+        getOperatorsFromServer(true)
       ]);
       
       console.log('Equipamentos carregados:', equipmentsData.length);
@@ -50,6 +51,7 @@ const SelectChecklist = () => {
       
       setEquipments(equipmentsData);
       setOperators(sortedOperators);
+      setLastRefresh(new Date());
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
@@ -61,8 +63,8 @@ const SelectChecklist = () => {
   }, []);
 
   useEffect(() => {
-    // Iniciar com forceRefresh=true para garantir dados atualizados
-    fetchData(true);
+    // Iniciar busca ao montar o componente
+    fetchData();
   }, [fetchData]);
 
   const handleRefresh = () => {
@@ -70,7 +72,7 @@ const SelectChecklist = () => {
     setSelectedEquipmentId('');
     setSelectedOperatorId('');
     toast.info('Atualizando dados do servidor...');
-    fetchData(true); // Sempre passa true para forceRefresh
+    fetchData();
   };
 
   const handleStartChecklist = () => {
@@ -130,7 +132,7 @@ const SelectChecklist = () => {
               {!loading && !error && (equipments.length > 0 || operators.length > 0) && (
                 <span className="ml-2 text-sm font-normal text-green-600 flex items-center">
                   <Database className="h-3 w-3 mr-1" />
-                  Dados carregados do servidor
+                  Dados atualizados às {lastRefresh.toLocaleTimeString()}
                 </span>
               )}
             </CardTitle>

@@ -37,11 +37,12 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
 // Obter equipamentos do PostgreSQL
 export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equipment[]> => {
   try {
-    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
-    const timestamp = `?t=${new Date().getTime()}`;
-    console.log('Buscando equipamentos do servidor com timestamp:', timestamp);
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
+    const timestamp = Date.now();
+    const randomParam = Math.random().toString(36).substring(7);
+    console.log(`Buscando equipamentos do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/equipments${timestamp}`);
+    const response = await api.get(`/equipments?t=${timestamp}&r=${randomParam}`);
     console.log('Equipamentos recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -65,11 +66,12 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
 // Obter operadores do PostgreSQL
 export const getOperatorsFromServer = async (forceRefresh = false): Promise<Operator[]> => {
   try {
-    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
-    const timestamp = `?t=${new Date().getTime()}`;
-    console.log('Buscando operadores do servidor com timestamp:', timestamp);
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
+    const timestamp = Date.now();
+    const randomParam = Math.random().toString(36).substring(7);
+    console.log(`Buscando operadores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/operators${timestamp}`);
+    const response = await api.get(`/operators?t=${timestamp}&r=${randomParam}`);
     console.log('Operadores recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -93,11 +95,12 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
 // Obter setores do PostgreSQL
 export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector[]> => {
   try {
-    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador
-    const timestamp = `?t=${new Date().getTime()}`;
-    console.log('Buscando setores do servidor com timestamp:', timestamp);
+    // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
+    const timestamp = Date.now();
+    const randomParam = Math.random().toString(36).substring(7);
+    console.log(`Buscando setores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
-    const response = await api.get(`/sectors${timestamp}`);
+    const response = await api.get(`/sectors?t=${timestamp}&r=${randomParam}`);
     console.log('Setores recebidos do servidor:', response.data);
     
     if (!Array.isArray(response.data)) {
@@ -116,7 +119,9 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
 // Obter histórico de checklists do PostgreSQL
 export const getChecklistHistoryFromServer = async (): Promise<ChecklistHistory[]> => {
   try {
-    const response = await api.get('/checklists/history');
+    const timestamp = Date.now();
+    const randomParam = Math.random().toString(36).substring(7);
+    const response = await api.get(`/checklists/history?t=${timestamp}&r=${randomParam}`);
     return response.data;
   } catch (error) {
     console.error('Erro ao buscar histórico do banco de dados:', error);
@@ -143,4 +148,3 @@ export const syncLocalHistoryWithServer = async (): Promise<void> => {
     toast.error('Falha ao sincronizar dados com o servidor');
   }
 };
-
