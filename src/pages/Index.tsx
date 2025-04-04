@@ -41,6 +41,19 @@ const Index = () => {
               <ChevronRight className="h-5 w-5" />
             </Button>
           </Link>
+          
+          <Link to="/settings" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full h-14 text-lg border-gray-300 flex justify-between items-center"
+            >
+              <span className="flex items-center">
+                <Settings className="mr-2 h-5 w-5" />
+                Configurações do Servidor
+              </span>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

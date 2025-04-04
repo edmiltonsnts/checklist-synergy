@@ -4,27 +4,31 @@ import { Button } from '@/components/ui/button';
 import { Database, WifiOff, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { API_URL } from '@/services/sqlServerService';
+import { getApiUrl } from '@/services/sqlServerService';
 
 const ServerConnectionStatus = () => {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState<string>('');
+  const [isLocal, setIsLocal] = useState<boolean>(false);
 
   const checkConnection = async () => {
     setChecking(true);
     try {
-      console.log('Verificando conexão com:', `${API_URL}/health`);
-      const response = await axios.get(`${API_URL}/health`, { timeout: 5000 });
+      const apiUrl = getApiUrl();
+      setIsLocal(localStorage.getItem('useLocalDb') === 'true');
+      
+      console.log('Verificando conexão com:', `${apiUrl}/health`);
+      const response = await axios.get(`${apiUrl}/health`, { timeout: 5000 });
       console.log('Resposta da API:', response.data);
       setIsConnected(true);
       setLastChecked(new Date().toLocaleTimeString());
-      toast.success("Conectado ao banco de dados PostgreSQL");
+      toast.success(`Conectado ao banco de dados ${isLocal ? 'local' : 'remoto'}`);
     } catch (error) {
       console.error("Erro de conexão com o banco de dados:", error);
       setIsConnected(false);
       setLastChecked(new Date().toLocaleTimeString());
-      toast.error("Falha na conexão com o PostgreSQL");
+      toast.error(`Falha na conexão com o banco de dados ${isLocal ? 'local' : 'remoto'}`);
     } finally {
       setChecking(false);
     }
@@ -40,7 +44,7 @@ const ServerConnectionStatus = () => {
   }, []);
 
   const handleRetry = () => {
-    toast.info("Tentando reconectar ao PostgreSQL...");
+    toast.info(`Tentando reconectar ao banco de dados ${isLocal ? 'local' : 'remoto'}...`);
     checkConnection();
   };
 
@@ -54,12 +58,12 @@ const ServerConnectionStatus = () => {
       ) : isConnected ? (
         <Button variant="ghost" size="sm" className="text-xs text-green-600" onClick={handleRetry} disabled={checking}>
           <Database className="h-3 w-3 mr-1" />
-          Conectado ao PostgreSQL {lastChecked && `(Verificado: ${lastChecked})`}
+          Conectado ao banco {isLocal ? 'local' : 'remoto'} {lastChecked && `(Verificado: ${lastChecked})`}
         </Button>
       ) : (
         <Button variant="ghost" size="sm" className="text-xs text-red-600" onClick={handleRetry} disabled={checking}>
           <WifiOff className="h-3 w-3 mr-1" />
-          Desconectado do PostgreSQL
+          Desconectado do banco {isLocal ? 'local' : 'remoto'}
           {checking ? <RefreshCw className="h-3 w-3 ml-1 animate-spin" /> : null}
           {lastChecked && ` (Última tentativa: ${lastChecked})`}
         </Button>

@@ -3,8 +3,16 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Checklist, ChecklistHistory, Equipment, Operator, Sector, Employee } from '@/types/checklist';
 
+// Função para obter a URL da API com base na configuração
+export const getApiUrl = () => {
+  const useLocalDb = localStorage.getItem('useLocalDb') === 'true';
+  return useLocalDb 
+    ? 'http://localhost:3000/api' // URL para banco de dados local
+    : 'http://172.16.2.94:3000/api'; // URL para banco de dados remoto
+};
+
 // URL base da API backend que se conecta ao PostgreSQL
-export const API_URL = 'http://172.16.2.94:3000/api';
+export const API_URL = getApiUrl();
 
 // Interface para realizar requisições HTTP para o PostgreSQL
 const api = axios.create({
@@ -43,12 +51,15 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
     // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
     const timestamp = Date.now();
     const randomParam = Math.random().toString(36).substring(7);
+    const currentApiUrl = getApiUrl(); // Obter URL atualizada
+    
     console.log(`Buscando equipamentos do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
+    console.log(`URL da API: ${currentApiUrl}`);
     
     // Vamos fazer uma requisição completamente nova a cada vez
     const response = await axios({
       method: 'get',
-      url: `${API_URL}/equipments`,
+      url: `${currentApiUrl}/equipments`,
       params: {
         t: timestamp,
         r: randomParam,
@@ -89,12 +100,15 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
     // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
     const timestamp = Date.now();
     const randomParam = Math.random().toString(36).substring(7);
+    const currentApiUrl = getApiUrl(); // Obter URL atualizada
+    
     console.log(`Buscando operadores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
+    console.log(`URL da API: ${currentApiUrl}`);
     
     // Vamos fazer uma requisição completamente nova a cada vez
     const response = await axios({
       method: 'get',
-      url: `${API_URL}/operators`,
+      url: `${currentApiUrl}/operators`,
       params: {
         t: timestamp,
         r: randomParam,
@@ -135,11 +149,13 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
     // Sempre adiciona um parâmetro de timestamp único para evitar cache do navegador e do servidor
     const timestamp = Date.now();
     const randomParam = Math.random().toString(36).substring(7);
+    const currentApiUrl = getApiUrl(); // Obter URL atualizada
+    
     console.log(`Buscando setores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
     
     const response = await axios({
       method: 'get',
-      url: `${API_URL}/sectors`,
+      url: `${currentApiUrl}/sectors`,
       params: {
         t: timestamp,
         r: randomParam,
@@ -174,7 +190,9 @@ export const getChecklistHistoryFromServer = async (): Promise<ChecklistHistory[
   try {
     const timestamp = Date.now();
     const randomParam = Math.random().toString(36).substring(7);
-    const response = await api.get(`/checklists/history?t=${timestamp}&r=${randomParam}`);
+    const currentApiUrl = getApiUrl(); // Obter URL atualizada
+    
+    const response = await axios.get(`${currentApiUrl}/checklists/history?t=${timestamp}&r=${randomParam}`);
     return response.data;
   } catch (error) {
     console.error('Erro ao buscar histórico do banco de dados:', error);
@@ -194,7 +212,8 @@ export const syncLocalHistoryWithServer = async (): Promise<void> => {
     
     if (localHistory.length === 0) return;
     
-    await api.post('/checklists/sync', { checklists: localHistory });
+    const currentApiUrl = getApiUrl(); // Obter URL atualizada
+    await axios.post(`${currentApiUrl}/checklists/sync`, { checklists: localHistory });
     toast.success('Histórico local sincronizado com o banco de dados!');
   } catch (error) {
     console.error('Erro ao sincronizar histórico com banco de dados:', error);
