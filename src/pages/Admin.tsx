@@ -382,13 +382,18 @@ const Admin = () => {
     
     const apiUrl = serverConfig.useLocalDb ? serverConfig.apiUrl : getApiUrl();
     
-    fetch(`${apiUrl}/health`, { timeout: 5000 })
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+  
+    fetch(`${apiUrl}/health`, { signal: controller.signal })
       .then(response => response.json())
       .then(data => {
+        clearTimeout(timeoutId);
         toast.dismiss();
         toast.success('Conexão com o servidor estabelecida com sucesso!');
       })
       .catch(error => {
+        clearTimeout(timeoutId);
         toast.dismiss();
         toast.error('Falha ao conectar com o servidor. Verifique as configurações.');
         console.error('Erro ao testar conexão:', error);
