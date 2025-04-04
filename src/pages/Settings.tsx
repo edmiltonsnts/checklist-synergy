@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, RefreshCw, Server } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Server, Info, Database, AlertTriangle } from 'lucide-react';
 import ServerConnectionStatus from '@/components/ServerConnectionStatus';
 import axios from 'axios';
+import { testPostgresConnection, getPostgresStatus } from '@/services/sqlServerService';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -24,6 +25,10 @@ const Settings = () => {
   const [dbName, setDbName] = useState('checklist_db');
   const [dbUser, setDbUser] = useState('postgres');
   const [dbPassword, setDbPassword] = useState('');
+  
+  // Estado para resultado de teste direto do PostgreSQL
+  const [pgTestResult, setPgTestResult] = useState<{success?: boolean, message?: string, info?: any} | null>(null);
+  const [testingPg, setTestingPg] = useState(false);
 
   useEffect(() => {
     // Carregar configurações do localStorage
@@ -99,6 +104,34 @@ const Settings = () => {
         toast.error('Falha ao conectar com o servidor. Verifique as configurações.');
         console.error('Erro ao testar conexão:', error);
       });
+  };
+  
+  const testPostgresDirectConnection = async () => {
+    setTestingPg(true);
+    setPgTestResult(null);
+    
+    toast.loading('Testando conexão direta com PostgreSQL...');
+    
+    try {
+      const result = await testPostgresConnection();
+      setPgTestResult(result);
+      toast.dismiss();
+      
+      if (result.success) {
+        toast.success('Conexão direta com PostgreSQL bem sucedida!');
+      } else {
+        toast.error('Falha ao conectar diretamente com PostgreSQL');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Erro ao testar conexão PostgreSQL');
+      setPgTestResult({
+        success: false,
+        message: 'Erro inesperado ao testar conexão'
+      });
+    } finally {
+      setTestingPg(false);
+    }
   };
 
   return (
@@ -207,6 +240,9 @@ const Settings = () => {
                           onChange={(e) => setDbHost(e.target.value)}
                           placeholder="localhost"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Para Proxmox, use o IP do contêiner ou VM
+                        </p>
                       </div>
                       <div>
                         <Label htmlFor="db-port">Porta</Label>
@@ -251,11 +287,56 @@ const Settings = () => {
                       </div>
                     </div>
                     
+                    <div className="flex justify-end">
+                      <Button 
+                        variant="outline" 
+                        onClick={testPostgresDirectConnection}
+                        disabled={testingPg}
+                      >
+                        {testingPg ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Testando...
+                          </>
+                        ) : (
+                          <>
+                            <Database className="h-4 w-4 mr-2" />
+                            Testar Conexão PostgreSQL
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {pgTestResult && (
+                      <div className={`p-3 rounded border ${pgTestResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-start gap-2">
+                          {pgTestResult.success ? (
+                            <Info className="h-4 w-4 text-green-500 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                          )}
+                          <div>
+                            <p className={`text-sm font-medium ${pgTestResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                              {pgTestResult.success ? 'Conexão bem sucedida' : 'Falha na conexão'}
+                            </p>
+                            {pgTestResult.message && (
+                              <p className="text-xs mt-1">{pgTestResult.message}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="bg-amber-50 p-3 rounded border border-amber-200">
                       <p className="text-sm text-amber-800">
-                        <strong>Nota:</strong> Estas configurações são necessárias apenas se você estiver 
-                        executando o servidor da API localmente e precisar conectar ao PostgreSQL.
+                        <strong>Configuração para Proxmox:</strong> 
                       </p>
+                      <ul className="list-disc pl-5 mt-1 text-sm text-amber-800">
+                        <li>Instale PostgreSQL no contêiner com: <code>apt install postgresql</code></li>
+                        <li>Configure o arquivo <code>pg_hba.conf</code> para permitir conexões</li>
+                        <li>Verifique se a porta 5432 está aberta no contêiner</li>
+                        <li>Use o comando: <code>sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'suasenha'"</code></li>
+                      </ul>
                     </div>
                   </div>
                 )}
@@ -287,76 +368,109 @@ const Settings = () => {
         
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Configurar Banco de Dados Local</CardTitle>
+            <CardTitle>Configurar PostgreSQL no Proxmox</CardTitle>
             <CardDescription>
-              Instruções para configurar um servidor local para testar o aplicativo
+              Instruções para configurar PostgreSQL em um contêiner LXC do Proxmox
             </CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-md border">
-              <h3 className="font-medium mb-2">Passo 1: Instalar Node.js e PostgreSQL</h3>
+              <h3 className="font-medium mb-2">Passo 1: Instalar PostgreSQL no contêiner</h3>
               <p className="text-sm text-gray-600">
-                Certifique-se de ter Node.js e PostgreSQL instalados na sua máquina.
+                Execute os seguintes comandos no contêiner LXC:
               </p>
-              <ul className="list-disc pl-5 text-sm text-gray-600 mt-2">
-                <li>PostgreSQL deve estar rodando na porta padrão 5432</li>
-                <li>Crie um banco de dados chamado 'checklist_db'</li>
-                <li>Use as credenciais configuradas acima para acessar o banco</li>
-              </ul>
+              <div className="bg-gray-800 text-gray-200 p-3 rounded mt-2 overflow-x-auto text-xs">
+                <code>
+                  # Atualizar os repositórios<br/>
+                  apt update<br/><br/>
+                  
+                  # Instalar o PostgreSQL<br/>
+                  apt install postgresql postgresql-contrib<br/><br/>
+                  
+                  # Verificar status do PostgreSQL<br/>
+                  systemctl status postgresql<br/>
+                </code>
+              </div>
             </div>
             
             <div className="bg-gray-50 p-4 rounded-md border">
               <h3 className="font-medium mb-2">Passo 2: Configurar o PostgreSQL</h3>
               <p className="text-sm text-gray-600">
-                Execute os comandos para criar o banco de dados e as tabelas necessárias:
+                Configure o PostgreSQL para aceitar conexões remotas:
               </p>
               <div className="bg-gray-800 text-gray-200 p-3 rounded mt-2 overflow-x-auto text-xs">
                 <code>
-                  # Criar banco de dados<br/>
-                  sudo -u postgres createdb checklist_db<br/><br/>
-                  
                   # Acessar o PostgreSQL<br/>
                   sudo -u postgres psql<br/><br/>
                   
-                  # Dentro do PostgreSQL, conceda permissões<br/>
-                  GRANT ALL PRIVILEGES ON DATABASE checklist_db TO postgres;<br/>
-                  \c checklist_db<br/>
-                  CREATE TABLE IF NOT EXISTS equipments (...);<br/>
-                  CREATE TABLE IF NOT EXISTS operators (...);<br/>
-                  CREATE TABLE IF NOT EXISTS checklists (...);<br/>
+                  # Alterar senha do usuário postgres<br/>
+                  ALTER USER postgres WITH PASSWORD 'senha_segura';<br/><br/>
+                  
+                  # Criar o banco de dados<br/>
+                  CREATE DATABASE checklist_db;<br/><br/>
+                  
+                  # Sair do psql<br/>
+                  \q<br/>
                 </code>
               </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-md border">
-              <h3 className="font-medium mb-2">Passo 3: Configurar o servidor da API</h3>
-              <p className="text-sm text-gray-600">
-                Crie um servidor Node.js com Express que exponha as rotas necessárias:
-              </p>
-              <ul className="list-disc pl-5 text-sm text-gray-600 mt-2">
-                <li>GET /api/equipments - Lista de equipamentos</li>
-                <li>GET /api/operators - Lista de operadores</li>
-                <li>GET /api/sectors - Lista de setores</li>
-                <li>POST /api/checklists - Salvar um novo checklist</li>
-                <li>GET /api/health - Status de saúde da API</li>
-              </ul>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-md border">
-              <h3 className="font-medium mb-2">Passo 4: Iniciar o servidor</h3>
-              <p className="text-sm text-gray-600">
-                Execute seu servidor API local e certifique-se de que está rodando na porta correta (padrão: 3000).
+              
+              <p className="text-sm text-gray-600 mt-3">
+                Edite o arquivo <code>postgresql.conf</code> para aceitar conexões remotas:
               </p>
               <div className="bg-gray-800 text-gray-200 p-3 rounded mt-2 overflow-x-auto text-xs">
                 <code>
-                  # Inicie seu servidor<br/>
-                  node server.js<br/><br/>
+                  # Editar o arquivo de configuração<br/>
+                  nano /etc/postgresql/*/main/postgresql.conf<br/><br/>
                   
-                  # Verifique se está funcionando<br/>
-                  curl http://localhost:3000/api/health
+                  # Alterar a linha<br/>
+                  listen_addresses = '*'<br/><br/>
+                  
+                  # Salvar e fechar o arquivo (Ctrl+X, Y, Enter)<br/><br/>
+                  
+                  # Editar o arquivo pg_hba.conf<br/>
+                  nano /etc/postgresql/*/main/pg_hba.conf<br/><br/>
+                  
+                  # Adicionar no final do arquivo<br/>
+                  host    all             all             0.0.0.0/0            md5<br/><br/>
+                  
+                  # Reiniciar o PostgreSQL<br/>
+                  systemctl restart postgresql<br/>
                 </code>
               </div>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-md border">
+              <h3 className="font-medium mb-2">Passo 3: Verificar configuração de rede</h3>
+              <p className="text-sm text-gray-600">
+                Verifique o IP do contêiner e teste a conexão:
+              </p>
+              <div className="bg-gray-800 text-gray-200 p-3 rounded mt-2 overflow-x-auto text-xs">
+                <code>
+                  # Instalar pacotes de rede<br/>
+                  apt install net-tools iproute2<br/><br/>
+                  
+                  # Verificar IP do contêiner<br/>
+                  ip addr show<br/><br/>
+                  
+                  # Verificar se a porta está aberta<br/>
+                  netstat -tulpn | grep 5432<br/><br/>
+                  
+                  # Testar conexão ao PostgreSQL<br/>
+                  psql -h localhost -U postgres -d checklist_db<br/>
+                </code>
+              </div>
+            </div>
+            
+            <div className="bg-amber-50 p-4 rounded-md border border-amber-200">
+              <h3 className="font-medium mb-2 text-amber-800">Observações importantes</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-amber-800">
+                <li>Confirme que o IP do contêiner é visível pela sua rede</li>
+                <li>Verifique se há um firewall bloqueando a porta 5432</li>
+                <li>Se estiver usando um contêiner privilegiado, alguns comandos podem requerer sudo</li>
+                <li>Certifique-se de usar senhas seguras em ambiente de produção</li>
+                <li>Uma vez que o PostgreSQL esteja rodando, ajuste as configurações acima para corresponder ao seu ambiente</li>
+              </ul>
             </div>
           </CardContent>
         </Card>

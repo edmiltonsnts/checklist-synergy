@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Checklist, ChecklistHistory, Equipment, Operator, Sector, Employee } from '@/types/checklist';
@@ -6,9 +5,10 @@ import { Checklist, ChecklistHistory, Equipment, Operator, Sector, Employee } fr
 // Função para obter a URL da API com base na configuração
 export const getApiUrl = () => {
   const useLocalDb = localStorage.getItem('useLocalDb') === 'true';
-  return useLocalDb 
-    ? 'http://localhost:3000/api' // URL para banco de dados local
-    : 'http://172.16.2.94:3000/api'; // URL para banco de dados remoto
+  const localDbUrl = localStorage.getItem('localDbUrl') || 'http://localhost:3000';
+  const remoteDbUrl = localStorage.getItem('remoteDbUrl') || 'http://172.16.2.94:3000';
+  
+  return useLocalDb ? `${localDbUrl}/api` : `${remoteDbUrl}/api`;
 };
 
 // URL base da API backend que se conecta ao PostgreSQL
@@ -25,6 +25,56 @@ const api = axios.create({
   },
   timeout: 10000 // Define um timeout de 10 segundos
 });
+
+// Configurar o axios para mostrar informações de depuração em caso de erro
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response) {
+      console.log('Resposta de erro do servidor:', error.response.data);
+      console.log('Status do erro:', error.response.status);
+    } else if (error.request) {
+      console.log('Requisição enviada mas sem resposta:', error.request);
+    } else {
+      console.log('Erro ao configurar requisição:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Método para testar a conexão com o servidor PostgreSQL diretamente
+export const testPostgresConnection = async () => {
+  const dbHost = localStorage.getItem('dbHost') || 'localhost';
+  const dbPort = localStorage.getItem('dbPort') || '5432';
+  const dbName = localStorage.getItem('dbName') || 'checklist_db';
+  const dbUser = localStorage.getItem('dbUser') || 'postgres';
+  const dbPassword = localStorage.getItem('dbPassword') || '';
+
+  try {
+    // A API precisará ter um endpoint específico para testar conexão direta com o Postgres
+    const apiUrl = getApiUrl();
+    const response = await axios.post(`${apiUrl.replace('/api', '')}/test-postgres`, {
+      host: dbHost,
+      port: dbPort,
+      database: dbName,
+      user: dbUser,
+      password: dbPassword
+    });
+    
+    return {
+      success: true,
+      message: response.data.message || 'Conexão bem sucedida',
+      info: response.data
+    };
+  } catch (error) {
+    console.error('Erro ao testar conexão PostgreSQL:', error);
+    return {
+      success: false,
+      message: 'Falha na conexão direta com PostgreSQL',
+      error
+    };
+  }
+};
 
 // Método para salvar um checklist no PostgreSQL
 export const saveChecklistToServer = async (checklist: Checklist): Promise<Checklist> => {
@@ -218,5 +268,18 @@ export const syncLocalHistoryWithServer = async (): Promise<void> => {
   } catch (error) {
     console.error('Erro ao sincronizar histórico com banco de dados:', error);
     toast.error('Falha ao sincronizar dados com o servidor');
+  }
+};
+
+// Verifica o status do PostgreSQL
+export const getPostgresStatus = async () => {
+  try {
+    // A API precisará ter um endpoint específico para verificar o status do Postgres
+    const apiUrl = getApiUrl();
+    const response = await axios.get(`${apiUrl}/postgres-status`);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao verificar status do PostgreSQL:', error);
+    return { status: 'error', message: 'Não foi possível verificar o status do PostgreSQL' };
   }
 };
