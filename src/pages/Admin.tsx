@@ -7,16 +7,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar, Mail, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash, ClipboardList, User, Settings, Calendar, Mail, Search, Server, Database } from 'lucide-react';
 import { Equipment, Operator, Sector } from '@/types/checklist';
 import { getEquipments } from '@/services/checklistService';
 import { getOperators, searchOperators } from '@/services/operatorsService';
 import { exportToJson, importFromJson } from '@/services/historyService';
+import { Switch } from '@/components/ui/switch';
+import { getApiUrl } from '@/services/sqlServerService';
 
 interface ChecklistTemplate {
   id: string;
   name: string;
   items: { id: number; question: string }[];
+}
+
+interface ServerConfig {
+  useLocalDb: boolean;
+  apiUrl: string;
+  dbHost: string;
+  dbPort: string;
+  dbName: string;
+  dbUser: string;
+  dbPassword: string;
 }
 
 const Admin = () => {
@@ -58,6 +70,16 @@ const Admin = () => {
   const [currentItems, setCurrentItems] = useState<{id: number; question: string}[]>([]);
 
   const [importType, setImportType] = useState<'equipments' | 'operators' | 'sectors' | 'checklists'>('equipments');
+
+  const [serverConfig, setServerConfig] = useState<ServerConfig>({
+    useLocalDb: localStorage.getItem('useLocalDb') === 'true',
+    apiUrl: localStorage.getItem('apiUrl') || 'http://localhost:3000/api',
+    dbHost: localStorage.getItem('dbHost') || 'localhost',
+    dbPort: localStorage.getItem('dbPort') || '5432',
+    dbName: localStorage.getItem('dbName') || 'checklist_db',
+    dbUser: localStorage.getItem('dbUser') || 'postgres',
+    dbPassword: localStorage.getItem('dbPassword') || ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -332,6 +354,47 @@ const Admin = () => {
     toast.success('Todas as alterações foram salvas com sucesso!');
   };
 
+  const handleServerConfigChange = (field: keyof ServerConfig, value: string | boolean) => {
+    setServerConfig({
+      ...serverConfig,
+      [field]: value
+    });
+  };
+
+  const handleSaveServerConfig = () => {
+    localStorage.setItem('useLocalDb', serverConfig.useLocalDb.toString());
+    localStorage.setItem('apiUrl', serverConfig.apiUrl);
+    localStorage.setItem('dbHost', serverConfig.dbHost);
+    localStorage.setItem('dbPort', serverConfig.dbPort);
+    localStorage.setItem('dbName', serverConfig.dbName);
+    localStorage.setItem('dbUser', serverConfig.dbUser);
+    localStorage.setItem('dbPassword', serverConfig.dbPassword);
+
+    toast.success('Configurações do servidor salvas com sucesso!');
+    
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+  };
+
+  const testServerConnection = () => {
+    toast.loading('Testando conexão com o servidor...');
+    
+    const apiUrl = serverConfig.useLocalDb ? serverConfig.apiUrl : getApiUrl();
+    
+    fetch(`${apiUrl}/health`, { timeout: 5000 })
+      .then(response => response.json())
+      .then(data => {
+        toast.dismiss();
+        toast.success('Conexão com o servidor estabelecida com sucesso!');
+      })
+      .catch(error => {
+        toast.dismiss();
+        toast.error('Falha ao conectar com o servidor. Verifique as configurações.');
+        console.error('Erro ao testar conexão:', error);
+      });
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 p-4">
       <div className="container mx-auto">
@@ -415,7 +478,7 @@ const Admin = () => {
         </Card>
 
         <Tabs defaultValue="equipments" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-6">
+          <TabsList className="grid grid-cols-5 mb-6">
             <TabsTrigger value="equipments" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Equipamentos
@@ -431,6 +494,10 @@ const Admin = () => {
             <TabsTrigger value="checklists" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               Checklists
+            </TabsTrigger>
+            <TabsTrigger value="server" className="flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Servidor
             </TabsTrigger>
           </TabsList>
 
@@ -883,6 +950,122 @@ const Admin = () => {
                         )}
                       </TableBody>
                     </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="server">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações do Servidor</CardTitle>
+                <CardDescription>
+                  Configure as conexões de banco de dados e API para o sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="use-local-db" 
+                      checked={serverConfig.useLocalDb} 
+                      onCheckedChange={(checked) => handleServerConfigChange('useLocalDb', checked)}
+                    />
+                    <Label htmlFor="use-local-db">Usar Banco de Dados Local</Label>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="api-url">URL da API</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          id="api-url" 
+                          value={serverConfig.apiUrl}
+                          onChange={(e) => handleServerConfigChange('apiUrl', e.target.value)}
+                          placeholder="Ex: http://localhost:3000/api"
+                          className="flex-1"
+                        />
+                        <Button 
+                          variant="secondary" 
+                          onClick={testServerConnection}
+                        >
+                          Testar Conexão
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="db-host">Host do Banco de Dados</Label>
+                        <Input 
+                          id="db-host" 
+                          value={serverConfig.dbHost}
+                          onChange={(e) => handleServerConfigChange('dbHost', e.target.value)}
+                          placeholder="Ex: localhost"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="db-port">Porta</Label>
+                        <Input 
+                          id="db-port" 
+                          value={serverConfig.dbPort}
+                          onChange={(e) => handleServerConfigChange('dbPort', e.target.value)}
+                          placeholder="Ex: 5432"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="db-name">Nome do Banco de Dados</Label>
+                      <Input 
+                        id="db-name" 
+                        value={serverConfig.dbName}
+                        onChange={(e) => handleServerConfigChange('dbName', e.target.value)}
+                        placeholder="Ex: checklist_db"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="db-user">Usuário do Banco</Label>
+                        <Input 
+                          id="db-user" 
+                          value={serverConfig.dbUser}
+                          onChange={(e) => handleServerConfigChange('dbUser', e.target.value)}
+                          placeholder="Ex: postgres"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="db-password">Senha do Banco</Label>
+                        <Input 
+                          id="db-password" 
+                          type="password"
+                          value={serverConfig.dbPassword}
+                          onChange={(e) => handleServerConfigChange('dbPassword', e.target.value)}
+                          placeholder="Sua senha"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <Button 
+                        onClick={handleSaveServerConfig}
+                        className="w-full bg-[#8B0000] hover:bg-[#6B0000] gap-2"
+                      >
+                        <Database className="h-4 w-4" /> Salvar Configurações do Servidor
+                      </Button>
+                    </div>
+
+                    <div className="bg-amber-50 p-4 rounded-md border border-amber-200 mt-4">
+                      <h3 className="font-medium text-amber-800 mb-2">Informações Importantes</h3>
+                      <ul className="list-disc pl-5 text-sm text-amber-700 space-y-1">
+                        <li>Para usar o banco de dados local, certifique-se de que o PostgreSQL está instalado e rodando</li>
+                        <li>O servidor da API deve estar respondendo no endereço configurado</li>
+                        <li>As configurações são salvas no navegador local</li>
+                        <li>Recomenda-se reiniciar a aplicação após alterar as configurações</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </CardContent>
