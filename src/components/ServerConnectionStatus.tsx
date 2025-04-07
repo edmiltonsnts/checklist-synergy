@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, WifiOff, RefreshCw, Server, Info, AlertTriangle, Network } from 'lucide-react';
+import { Database, WifiOff, RefreshCw, Server, Info, AlertTriangle, Network, Download } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { getApiUrl } from '@/services/sqlServerService';
@@ -14,6 +14,7 @@ const ServerConnectionStatus = () => {
   const [serverInfo, setServerInfo] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
+  const [showLocalDbInstructions, setShowLocalDbInstructions] = useState(false);
 
   const checkConnection = async () => {
     setChecking(true);
@@ -76,6 +77,10 @@ const ServerConnectionStatus = () => {
     checkConnection();
   };
 
+  const toggleLocalDbInstructions = () => {
+    setShowLocalDbInstructions(!showLocalDbInstructions);
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-md">
@@ -95,6 +100,13 @@ const ServerConnectionStatus = () => {
             Desconectado do banco {isLocal ? 'local' : 'remoto'}
             {checking ? <RefreshCw className="h-3 w-3 ml-1 animate-spin" /> : null}
             {lastChecked && ` (Última tentativa: ${lastChecked})`}
+          </Button>
+        )}
+        
+        {!isConnected && (
+          <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={toggleLocalDbInstructions}>
+            <Download className="h-3 w-3 mr-1" />
+            {showLocalDbInstructions ? 'Ocultar instruções' : 'Instruções para banco local'}
           </Button>
         )}
       </div>
@@ -136,6 +148,76 @@ const ServerConnectionStatus = () => {
             <div>
               <h4 className="text-sm font-medium text-blue-700">Informação do Servidor</h4>
               <p className="text-xs text-blue-600">{serverInfo}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showLocalDbInstructions && (
+        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <h4 className="text-sm font-medium text-blue-700 mb-2">Como Configurar PostgreSQL Localmente</h4>
+          
+          <div className="space-y-3">
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">1. Instale o PostgreSQL</h5>
+              <p className="text-xs text-blue-600">
+                Windows: Baixe e instale do <a href="https://www.postgresql.org/download/windows/" target="_blank" rel="noopener noreferrer" className="underline">site oficial</a> 
+                <br />
+                Mac: Use Homebrew <code>brew install postgresql</code>
+                <br />
+                Linux: <code>sudo apt install postgresql postgresql-contrib</code>
+              </p>
+            </div>
+            
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">2. Crie um banco de dados</h5>
+              <p className="text-xs text-blue-600">
+                <code>sudo -u postgres psql</code>
+                <br />
+                <code>CREATE DATABASE checklist_db;</code>
+                <br />
+                <code>ALTER USER postgres WITH PASSWORD 'suasenha';</code>
+                <br />
+                <code>\q</code>
+              </p>
+            </div>
+            
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">3. Configure o arquivo pg_hba.conf</h5>
+              <p className="text-xs text-blue-600">
+                Edite <code>/etc/postgresql/[versão]/main/pg_hba.conf</code>
+                <br />
+                Adicione: <code>host all all 0.0.0.0/0 md5</code>
+              </p>
+            </div>
+            
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">4. Configure o arquivo postgresql.conf</h5>
+              <p className="text-xs text-blue-600">
+                Edite <code>/etc/postgresql/[versão]/main/postgresql.conf</code>
+                <br />
+                Altere para: <code>listen_addresses = '*'</code>
+              </p>
+            </div>
+            
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">5. Reinicie o PostgreSQL</h5>
+              <p className="text-xs text-blue-600">
+                <code>sudo systemctl restart postgresql</code>
+              </p>
+            </div>
+            
+            <div>
+              <h5 className="text-xs font-semibold text-blue-700">6. Configure a aplicação</h5>
+              <p className="text-xs text-blue-600">
+                - Nas configurações da aplicação, selecione "Usar Banco de Dados Local"
+                <br />
+                - Nas configurações avançadas, preencha:
+                <br />
+                Host: localhost | Porta: 5432 | Nome do BD: checklist_db
+                <br />
+                Usuário: postgres | Senha: (a senha que você definiu)
+              </p>
             </div>
           </div>
         </div>
