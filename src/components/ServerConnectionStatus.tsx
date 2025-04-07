@@ -13,6 +13,7 @@ const ServerConnectionStatus = () => {
   const [isLocal, setIsLocal] = useState<boolean>(false);
   const [serverInfo, setServerInfo] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [ipAddress, setIpAddress] = useState<string | null>(null);
 
   const checkConnection = async () => {
     setChecking(true);
@@ -20,6 +21,10 @@ const ServerConnectionStatus = () => {
     try {
       const apiUrl = getApiUrl();
       setIsLocal(localStorage.getItem('useLocalDb') === 'true');
+      
+      // Obter o host do PostgreSQL para exibição
+      const dbHost = localStorage.getItem('dbHost') || 'localhost';
+      setIpAddress(dbHost);
       
       console.log('Verificando conexão com:', `${apiUrl}/health`);
       const response = await axios.get(`${apiUrl}/health`, { timeout: 10000 });
@@ -60,7 +65,7 @@ const ServerConnectionStatus = () => {
   useEffect(() => {
     checkConnection();
     
-    // Check connection every 3 minutes (aumentado de 2 para 3 minutos)
+    // Check connection every 3 minutes
     const interval = setInterval(checkConnection, 180000);
     
     return () => clearInterval(interval);
@@ -107,7 +112,17 @@ const ServerConnectionStatus = () => {
                 <ul className="list-disc pl-4 mt-1">
                   <li>API: {getApiUrl()}</li>
                   <li>Modo: {isLocal ? 'Local' : 'Remoto'}</li>
+                  <li>Host PostgreSQL: {ipAddress || 'Não definido'}</li>
                 </ul>
+              </div>
+              
+              <div className="mt-2 text-xs">
+                <p className="font-medium">Solução para Proxmox:</p>
+                <ol className="list-decimal pl-5 mt-1">
+                  <li>Verifique se o IP {ipAddress || 'configurado'} está correto (use o IP do seu contêiner Proxmox - 172.16.5.165)</li>
+                  <li>Confirme se a porta 5432 está aberta no contêiner</li>
+                  <li>Verifique se o PostgreSQL está rodando com <code>systemctl status postgresql</code></li>
+                </ol>
               </div>
             </div>
           </div>
@@ -134,22 +149,12 @@ const ServerConnectionStatus = () => {
           </div>
           <ul className="list-disc pl-5 mt-1 space-y-1">
             <li>Verifique se o contêiner LXC ou VM está rodando no Proxmox</li>
-            <li>Use o IP do contêiner como Host nas configurações avançadas</li>
-            <li>Certifique-se que o PostgreSQL está instalado com <code>apt install postgresql</code></li>
+            <li>Use o IP do contêiner <strong>172.16.5.165</strong> como Host nas configurações avançadas</li>
+            <li>Certifique-se que o PostgreSQL está instalado e rodando</li>
             <li>Configure <code>postgresql.conf</code> para permitir conexões remotas com <code>listen_addresses = '*'</code></li>
             <li>Configure <code>pg_hba.conf</code> com <code>host all all 0.0.0.0/0 md5</code></li>
             <li>Verifique se a porta 5432 está aberta com <code>netstat -tulpn | grep 5432</code></li>
           </ul>
-        </div>
-        
-        <div className="mt-2 text-xs bg-amber-50 p-2 rounded border border-amber-200">
-          <div className="flex items-center gap-1 text-amber-700">
-            <Network className="h-3 w-3" />
-            <span className="font-medium">Importante:</span>
-          </div>
-          <p className="text-amber-700 mt-1">
-            Para usar PostgreSQL no Proxmox, certifique-se de configurar as Configurações Avançadas na página de Configurações com o IP do contêiner Proxmox.
-          </p>
         </div>
       </div>
     </div>
