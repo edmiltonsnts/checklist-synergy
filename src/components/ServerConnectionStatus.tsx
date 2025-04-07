@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, WifiOff, RefreshCw, Server, Info, AlertTriangle, Network, Download } from 'lucide-react';
+import { WifiOff, RefreshCw, Server, Info, AlertTriangle, Network, Download, Database } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { getApiUrl } from '@/services/sqlServerService';
+import { getApiUrl, isUsingIndexedDB, getIndexedDBStatus } from '@/services/sqlServerService';
 
 const ServerConnectionStatus = () => {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
@@ -15,10 +15,43 @@ const ServerConnectionStatus = () => {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
   const [showLocalDbInstructions, setShowLocalDbInstructions] = useState(false);
+  const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
+  const [indexedDBStatus, setIndexedDBStatus] = useState<'ok' | 'error' | null>(null);
 
   const checkConnection = async () => {
     setChecking(true);
     setErrorDetails(null);
+    
+    // Verificar se está usando IndexedDB
+    const useIndexedDb = isUsingIndexedDB();
+    setUsingIndexedDB(useIndexedDb);
+    
+    if (useIndexedDb) {
+      // Testar IndexedDB
+      try {
+        const result = await getIndexedDBStatus();
+        setIndexedDBStatus(result.status as 'ok' | 'error');
+        setIsConnected(result.status === 'ok');
+        setLastChecked(new Date().toLocaleTimeString());
+        
+        if (result.status === 'ok') {
+          toast.success('IndexedDB está funcionando corretamente');
+        } else {
+          toast.error('Erro com IndexedDB: ' + result.message);
+          setErrorDetails(result.message || 'Erro desconhecido com IndexedDB');
+        }
+      } catch (error: any) {
+        setIsConnected(false);
+        setIndexedDBStatus('error');
+        setLastChecked(new Date().toLocaleTimeString());
+        setErrorDetails('Erro ao acessar IndexedDB: ' + (error.message || 'Erro desconhecido'));
+      } finally {
+        setChecking(false);
+      }
+      return;
+    }
+    
+    // Se não estiver usando IndexedDB, continuar com a verificação do PostgreSQL
     try {
       const apiUrl = getApiUrl();
       setIsLocal(localStorage.getItem('useLocalDb') === 'true');
@@ -73,7 +106,11 @@ const ServerConnectionStatus = () => {
   }, []);
 
   const handleRetry = () => {
-    toast.info(`Tentando reconectar ao banco de dados ${isLocal ? 'local' : 'remoto'}...`);
+    if (usingIndexedDB) {
+      toast.info('Verificando IndexedDB...');
+    } else {
+      toast.info(`Tentando reconectar ao banco de dados ${isLocal ? 'local' : 'remoto'}...`);
+    }
     checkConnection();
   };
 
@@ -89,6 +126,11 @@ const ServerConnectionStatus = () => {
             <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
             Verificando conexão...
           </Button>
+        ) : usingIndexedDB ? (
+          <Button variant="ghost" size="sm" className={`text-xs ${isConnected ? 'text-purple-600' : 'text-red-600'}`} onClick={handleRetry} disabled={checking}>
+            <Database className="h-3 w-3 mr-1" />
+            {isConnected ? 'IndexedDB ativo' : 'Erro no IndexedDB'} {lastChecked && `(Verificado: ${lastChecked})`}
+          </Button>
         ) : isConnected ? (
           <Button variant="ghost" size="sm" className="text-xs text-green-600" onClick={handleRetry} disabled={checking}>
             <Database className="h-3 w-3 mr-1" />
@@ -103,7 +145,7 @@ const ServerConnectionStatus = () => {
           </Button>
         )}
         
-        {!isConnected && (
+        {(!isConnected && !usingIndexedDB) && (
           <Button variant="ghost" size="sm" className="text-xs text-blue-600" onClick={toggleLocalDbInstructions}>
             <Download className="h-3 w-3 mr-1" />
             {showLocalDbInstructions ? 'Ocultar instruções' : 'Instruções para banco local'}
@@ -111,7 +153,29 @@ const ServerConnectionStatus = () => {
         )}
       </div>
       
-      {errorDetails && !isConnected && (
+      {usingIndexedDB && indexedDBStatus === 'error' && (
+        <div className="bg-red-50 p-2 rounded-lg border border-red-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-medium text-red-700">Problemas com IndexedDB</h4>
+              <p className="text-xs text-red-600">{errorDetails || 'O navegador não suporta ou está bloqueando IndexedDB.'}</p>
+              
+              <div className="mt-2 text-xs">
+                <p className="font-medium">Possíveis soluções:</p>
+                <ol className="list-decimal pl-5 mt-1">
+                  <li>Verifique se seu navegador está atualizado</li>
+                  <li>O modo de navegação privada/anônima pode bloquear IndexedDB</li>
+                  <li>Algumas extensões de privacidade podem interferir</li>
+                  <li>Considere usar PostgreSQL se precisar de uma solução mais robusta</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {errorDetails && !isConnected && !usingIndexedDB && (
         <div className="bg-red-50 p-2 rounded-lg border border-red-200">
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
@@ -136,12 +200,17 @@ const ServerConnectionStatus = () => {
                   <li>Verifique se o PostgreSQL está rodando com <code>systemctl status postgresql</code></li>
                 </ol>
               </div>
+              
+              <div className="mt-2 text-xs text-blue-600">
+                <p className="font-medium">Alternativa:</p>
+                <p>Considere usar o modo IndexedDB que não requer instalação de servidor para testes</p>
+              </div>
             </div>
           </div>
         </div>
       )}
       
-      {serverInfo && (
+      {serverInfo && !usingIndexedDB && (
         <div className="bg-blue-50 p-2 rounded-lg border border-blue-200">
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-500 mt-0.5" />
@@ -153,7 +222,7 @@ const ServerConnectionStatus = () => {
         </div>
       )}
       
-      {showLocalDbInstructions && (
+      {showLocalDbInstructions && !usingIndexedDB && (
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
           <h4 className="text-sm font-medium text-blue-700 mb-2">Como Configurar PostgreSQL Localmente</h4>
           
@@ -219,26 +288,35 @@ const ServerConnectionStatus = () => {
                 Usuário: postgres | Senha: (a senha que você definiu)
               </p>
             </div>
+            
+            <div className="mt-2 pt-2 border-t border-blue-200">
+              <h5 className="text-xs font-semibold text-purple-700">Alternativa mais simples: Usar IndexedDB</h5>
+              <p className="text-xs text-purple-600">
+                Se preferir uma solução que não requer instalação de servidor, selecione a opção "IndexedDB" nas configurações de armazenamento.
+              </p>
+            </div>
           </div>
         </div>
       )}
       
-      <div className="bg-gray-100 p-2 rounded-lg">
-        <div className="text-xs text-gray-500">
-          <div className="flex items-center gap-1">
-            <Server className="h-3 w-3" />
-            <span>Dicas para Proxmox:</span>
+      {!usingIndexedDB && (
+        <div className="bg-gray-100 p-2 rounded-lg">
+          <div className="text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <Server className="h-3 w-3" />
+              <span>Dicas para Proxmox:</span>
+            </div>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>Verifique se o contêiner LXC ou VM está rodando no Proxmox</li>
+              <li>Use o IP do contêiner <strong>172.16.5.165</strong> como Host nas configurações avançadas</li>
+              <li>Certifique-se que o PostgreSQL está instalado e rodando</li>
+              <li>Configure <code>postgresql.conf</code> para permitir conexões remotas com <code>listen_addresses = '*'</code></li>
+              <li>Configure <code>pg_hba.conf</code> com <code>host all all 0.0.0.0/0 md5</code></li>
+              <li>Verifique se a porta 5432 está aberta com <code>netstat -tulpn | grep 5432</code></li>
+            </ul>
           </div>
-          <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li>Verifique se o contêiner LXC ou VM está rodando no Proxmox</li>
-            <li>Use o IP do contêiner <strong>172.16.5.165</strong> como Host nas configurações avançadas</li>
-            <li>Certifique-se que o PostgreSQL está instalado e rodando</li>
-            <li>Configure <code>postgresql.conf</code> para permitir conexões remotas com <code>listen_addresses = '*'</code></li>
-            <li>Configure <code>pg_hba.conf</code> com <code>host all all 0.0.0.0/0 md5</code></li>
-            <li>Verifique se a porta 5432 está aberta com <code>netstat -tulpn | grep 5432</code></li>
-          </ul>
         </div>
-      </div>
+      )}
     </div>
   );
 };
