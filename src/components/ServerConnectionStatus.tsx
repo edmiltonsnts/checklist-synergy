@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { WifiOff, RefreshCw, Server, Info, AlertTriangle, Network, Download, Database } from 'lucide-react';
@@ -17,17 +16,20 @@ const ServerConnectionStatus = () => {
   const [showLocalDbInstructions, setShowLocalDbInstructions] = useState(false);
   const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
   const [indexedDBStatus, setIndexedDBStatus] = useState<'ok' | 'error' | null>(null);
+  const [indexedDBDetails, setIndexedDBDetails] = useState<{
+    databaseName: string;
+    version: number;
+    objectStores: string[];
+  } | null>(null);
 
   const checkConnection = async () => {
     setChecking(true);
     setErrorDetails(null);
     
-    // Verificar se está usando IndexedDB
     const useIndexedDb = isUsingIndexedDB();
     setUsingIndexedDB(useIndexedDb);
     
     if (useIndexedDb) {
-      // Testar IndexedDB
       try {
         const result = await getIndexedDBStatus();
         setIndexedDBStatus(result.status as 'ok' | 'error');
@@ -51,12 +53,10 @@ const ServerConnectionStatus = () => {
       return;
     }
     
-    // Se não estiver usando IndexedDB, continuar com a verificação do PostgreSQL
     try {
       const apiUrl = getApiUrl();
       setIsLocal(localStorage.getItem('useLocalDb') === 'true');
       
-      // Obter o host do PostgreSQL para exibição
       const dbHost = localStorage.getItem('dbHost') || 'localhost';
       setIpAddress(dbHost);
       
@@ -66,7 +66,6 @@ const ServerConnectionStatus = () => {
       setIsConnected(true);
       setLastChecked(new Date().toLocaleTimeString());
       
-      // Tentar obter informações do servidor, se disponíveis
       if (response.data && response.data.server) {
         setServerInfo(response.data.server);
       }
@@ -77,7 +76,6 @@ const ServerConnectionStatus = () => {
       setIsConnected(false);
       setLastChecked(new Date().toLocaleTimeString());
       
-      // Extrair detalhes do erro para diagnóstico
       let errorMsg = "Erro desconhecido";
       if (error.code === 'ERR_NETWORK') {
         errorMsg = "Erro de rede - O servidor não está acessível. Verifique se o endereço IP e porta estão corretos e se há conexão de rede.";
@@ -96,14 +94,41 @@ const ServerConnectionStatus = () => {
     }
   };
 
+  const checkIndexedDBDetails = async () => {
+    if (!usingIndexedDB) return;
+
+    try {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('checklistDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      const objectStoreNames = Array.from(db.objectStoreNames);
+      
+      setIndexedDBDetails({
+        databaseName: db.name,
+        version: db.version,
+        objectStores: objectStoreNames
+      });
+    } catch (error) {
+      console.error('Error accessing IndexedDB details:', error);
+    }
+  };
+
   useEffect(() => {
     checkConnection();
     
-    // Check connection every 3 minutes
     const interval = setInterval(checkConnection, 180000);
     
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (usingIndexedDB) {
+      checkIndexedDBDetails();
+    }
+  }, [usingIndexedDB]);
 
   const handleRetry = () => {
     if (usingIndexedDB) {
@@ -153,23 +178,19 @@ const ServerConnectionStatus = () => {
         )}
       </div>
       
-      {usingIndexedDB && indexedDBStatus === 'error' && (
-        <div className="bg-red-50 p-2 rounded-lg border border-red-200">
+      {usingIndexedDB && indexedDBStatus === 'ok' && indexedDBDetails && (
+        <div className="bg-green-50 p-2 rounded-lg border border-green-200">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+            <Database className="h-4 w-4 text-green-500 mt-0.5" />
             <div>
-              <h4 className="text-sm font-medium text-red-700">Problemas com IndexedDB</h4>
-              <p className="text-xs text-red-600">{errorDetails || 'O navegador não suporta ou está bloqueando IndexedDB.'}</p>
-              
-              <div className="mt-2 text-xs">
-                <p className="font-medium">Possíveis soluções:</p>
-                <ol className="list-decimal pl-5 mt-1">
-                  <li>Verifique se seu navegador está atualizado</li>
-                  <li>O modo de navegação privada/anônima pode bloquear IndexedDB</li>
-                  <li>Algumas extensões de privacidade podem interferir</li>
-                  <li>Considere usar PostgreSQL se precisar de uma solução mais robusta</li>
-                </ol>
-              </div>
+              <h4 className="text-sm font-medium text-green-700">IndexedDB Details</h4>
+              <p className="text-xs text-green-600">
+                Database: {indexedDBDetails.databaseName}
+                <br />
+                Version: {indexedDBDetails.version}
+                <br />
+                Object Stores: {indexedDBDetails.objectStores.join(', ')}
+              </p>
             </div>
           </div>
         </div>
