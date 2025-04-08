@@ -109,7 +109,7 @@ const Admin: React.FC = () => {
         </div>
         
         <Card className="mb-4 p-4">
-          <ServerConnectionStatus onTestConnection={handleTestConnection} onSyncWithServer={handleSyncWithServer} />
+          <ServerConnectionStatus />
         </Card>
         
         <Tabs defaultValue="equipments">
