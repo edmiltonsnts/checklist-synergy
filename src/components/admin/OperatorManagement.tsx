@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Plus, Trash, Search } from 'lucide-react';
 import { Operator } from '@/types/checklist';
 import { toast } from 'sonner';
 import { searchOperators } from '@/services/operatorsService';
+import { saveOperatorToServer, deleteOperatorFromServer } from '@/services/sqlServerService';
 
 interface OperatorManagementProps {
   operators: Operator[];
@@ -24,8 +25,9 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
   });
   const [operatorSearchQuery, setOperatorSearchQuery] = useState('');
   const [filteredOperators, setFilteredOperators] = useState<Operator[]>(operators);
+  const [saving, setSaving] = useState(false);
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (!operatorSearchQuery.trim()) {
       setFilteredOperators(operators);
     } else {
@@ -34,7 +36,7 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
     }
   }, [operators, operatorSearchQuery]);
 
-  const handleAddOperator = () => {
+  const handleAddOperator = async () => {
     if (!newOperator.id || !newOperator.name) {
       toast.error('Preencha os campos obrigatórios');
       return;
@@ -47,35 +49,58 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
     }
 
     const operatorToAdd = { ...newOperator } as Operator;
-    const updatedOperators = [...operators, operatorToAdd];
-    const sortedOperators = updatedOperators.sort((a, b) => a.name.localeCompare(b.name));
     
-    setOperators(sortedOperators);
-    setFilteredOperators(sortedOperators);
-    localStorage.setItem('operators', JSON.stringify(sortedOperators));
+    // Indicar que está salvando
+    setSaving(true);
     
-    setNewOperator({ id: '', name: '', role: '', sector: '' });
-    toast.success('Operador adicionado com sucesso');
+    try {
+      // Salvar no servidor ou IndexedDB
+      await saveOperatorToServer(operatorToAdd);
+      
+      // Atualizar a lista local
+      const updatedOperators = [...operators, operatorToAdd];
+      const sortedOperators = updatedOperators.sort((a, b) => a.name.localeCompare(b.name));
+      
+      setOperators(sortedOperators);
+      setFilteredOperators(sortedOperators);
+      
+      // Limpar o formulário
+      setNewOperator({ id: '', name: '', role: '', sector: '' });
+    } catch (error) {
+      console.error('Erro ao adicionar operador:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeleteOperator = (id: string) => {
-    const updatedOperators = operators.filter(o => o.id !== id);
-    setOperators(updatedOperators);
+  const handleDeleteOperator = async (id: string) => {
+    // Indicar que está processando
+    setSaving(true);
     
-    // Update filtered operators
-    if (!operatorSearchQuery.trim()) {
-      setFilteredOperators(updatedOperators);
-    } else {
-      setFilteredOperators(updatedOperators.filter(o => 
-        o.name.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
-        o.id.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
-        o.sector.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
-        o.role?.toLowerCase().includes(operatorSearchQuery.toLowerCase() || '')
-      ));
+    try {
+      // Remover do servidor ou IndexedDB
+      await deleteOperatorFromServer(id);
+      
+      // Atualizar a lista local
+      const updatedOperators = operators.filter(o => o.id !== id);
+      setOperators(updatedOperators);
+      
+      // Atualizar a lista filtrada
+      if (!operatorSearchQuery.trim()) {
+        setFilteredOperators(updatedOperators);
+      } else {
+        setFilteredOperators(updatedOperators.filter(o => 
+          o.name.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+          o.id.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+          o.sector.toLowerCase().includes(operatorSearchQuery.toLowerCase()) ||
+          o.role?.toLowerCase().includes(operatorSearchQuery.toLowerCase() || '')
+        ));
+      }
+    } catch (error) {
+      console.error('Erro ao remover operador:', error);
+    } finally {
+      setSaving(false);
     }
-    
-    localStorage.setItem('operators', JSON.stringify(updatedOperators));
-    toast.success('Operador removido com sucesso');
   };
 
   const handleSearchOperator = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +159,7 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
               <Button 
                 onClick={handleAddOperator}
                 className="w-full bg-[#8B0000] hover:bg-[#6B0000] mt-6"
+                disabled={saving}
               >
                 <Plus className="mr-2 h-4 w-4" /> Adicionar
               </Button>
@@ -175,6 +201,7 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
                           size="sm"
                           onClick={() => handleDeleteOperator(operator.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          disabled={saving}
                         >
                           <Trash className="h-4 w-4" />
                         </Button>

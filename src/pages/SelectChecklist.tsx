@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw, AlertTriangle, Database, Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -84,10 +84,10 @@ const SelectChecklist = () => {
     // Limpar cache ao montar o componente
     clearBrowserCache();
     
-    // Iniciar busca ao montar o componente
+    // Iniciar busca ao montar o componente - sempre forçando refresh
     fetchData();
     
-    // Configurar um intervalo para atualizar os dados a cada 30 segundos
+    // Configurar um intervalo para atualizar os dados periodicamente
     const intervalId = setInterval(() => {
       console.log('Atualizando dados automaticamente...');
       fetchData();

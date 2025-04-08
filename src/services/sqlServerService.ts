@@ -74,7 +74,7 @@ const initIndexedDB = (): Promise<IDBDatabase> => {
       }
       
       if (!db.objectStoreNames.contains('checklists')) {
-        db.createObjectStore('checklists', { keyPath: 'id', autoIncrement: true });
+        const checklistStore = db.createObjectStore('checklists', { keyPath: 'id', autoIncrement: true });
       }
     };
     
@@ -137,7 +137,9 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
         
         request.onsuccess = () => {
           toast.success('Checklist salvo no IndexedDB com sucesso!');
-          resolve({ ...checklist, id: request.result });
+          // Garantimos que o ID retornado é do tipo number para corresponder à assinatura da função
+          const newId = typeof request.result === 'number' ? request.result : Number(request.result);
+          resolve({ ...checklist, id: newId });
         };
         
         request.onerror = () => {
@@ -190,8 +192,8 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
           const data = request.result;
           console.log('Equipamentos recebidos do IndexedDB:', data);
           
-          if (data.length === 0) {
-            // Se não houver dados no IndexedDB, usar dados locais
+          if (data.length === 0 && forceRefresh) {
+            // Se não houver dados no IndexedDB e forceRefresh=true, usar dados locais
             import('./checklistService').then(module => {
               const localData = module.equipmentsList;
               console.log('Carregando equipamentos locais para o IndexedDB:', localData);
@@ -272,7 +274,6 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
       console.error('Erro ao buscar equipamentos do banco de dados:', error);
       toast.error('Falha ao buscar equipamentos do servidor. Usando dados locais.');
       
-      // Fallback para dados locais
       const { getEquipments } = await import('./checklistService');
       const localData = await getEquipments();
       console.log('Usando equipamentos locais:', localData);
@@ -297,8 +298,8 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
           const data = request.result;
           console.log('Operadores recebidos do IndexedDB:', data);
           
-          if (data.length === 0) {
-            // Se não houver dados no IndexedDB, usar dados locais
+          if (data.length === 0 && forceRefresh) {
+            // Se não houver dados no IndexedDB e forceRefresh=true, usar dados locais
             import('./operatorsService').then(module => {
               module.getOperators().then(localData => {
                 console.log('Carregando operadores locais para o IndexedDB:', localData);
@@ -554,5 +555,207 @@ export const getIndexedDBStatus = async () => {
   } catch (error) {
     console.error('Erro ao verificar status do IndexedDB:', error);
     return { status: 'error', message: 'IndexedDB não está disponível ou houve um erro' };
+  }
+};
+
+// Salvar equipamento no IndexedDB ou PostgreSQL
+export const saveEquipmentToServer = async (equipment: Equipment): Promise<Equipment> => {
+  if (isUsingIndexedDB()) {
+    try {
+      console.log('Salvando equipamento no IndexedDB:', equipment);
+      const db = await initIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction('equipments', 'readwrite');
+        const store = transaction.objectStore('equipments');
+        
+        // Verifica se já existe um equipamento com este ID
+        const getRequest = store.get(equipment.id);
+        
+        getRequest.onsuccess = () => {
+          const existingEquipment = getRequest.result;
+          let saveRequest;
+          
+          if (existingEquipment) {
+            // Se já existe, atualiza
+            saveRequest = store.put(equipment);
+          } else {
+            // Se não existe, adiciona
+            saveRequest = store.add(equipment);
+          }
+          
+          saveRequest.onsuccess = () => {
+            toast.success('Equipamento salvo no IndexedDB com sucesso!');
+            resolve(equipment);
+          };
+          
+          saveRequest.onerror = () => {
+            toast.error('Falha ao salvar equipamento no IndexedDB');
+            reject(saveRequest.error);
+          };
+        };
+        
+        getRequest.onerror = () => {
+          toast.error('Falha ao verificar equipamento no IndexedDB');
+          reject(getRequest.error);
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao salvar equipamento no IndexedDB:', error);
+      toast.error('Falha ao salvar equipamento no IndexedDB');
+      throw error;
+    }
+  } else {
+    try {
+      console.log('Salvando equipamento no servidor:', equipment);
+      const response = await api.post('/equipments', equipment);
+      toast.success('Equipamento salvo no banco de dados com sucesso!');
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao salvar equipamento no banco de dados:', error);
+      toast.error('Falha ao salvar equipamento no banco de dados');
+      throw error;
+    }
+  }
+};
+
+// Salvar operador no IndexedDB ou PostgreSQL
+export const saveOperatorToServer = async (operator: Operator): Promise<Operator> => {
+  if (isUsingIndexedDB()) {
+    try {
+      console.log('Salvando operador no IndexedDB:', operator);
+      const db = await initIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction('operators', 'readwrite');
+        const store = transaction.objectStore('operators');
+        
+        // Verifica se já existe um operador com este ID
+        const getRequest = store.get(operator.id);
+        
+        getRequest.onsuccess = () => {
+          const existingOperator = getRequest.result;
+          let saveRequest;
+          
+          if (existingOperator) {
+            // Se já existe, atualiza
+            saveRequest = store.put(operator);
+          } else {
+            // Se não existe, adiciona
+            saveRequest = store.add(operator);
+          }
+          
+          saveRequest.onsuccess = () => {
+            toast.success('Operador salvo no IndexedDB com sucesso!');
+            resolve(operator);
+          };
+          
+          saveRequest.onerror = () => {
+            toast.error('Falha ao salvar operador no IndexedDB');
+            reject(saveRequest.error);
+          };
+        };
+        
+        getRequest.onerror = () => {
+          toast.error('Falha ao verificar operador no IndexedDB');
+          reject(getRequest.error);
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao salvar operador no IndexedDB:', error);
+      toast.error('Falha ao salvar operador no IndexedDB');
+      throw error;
+    }
+  } else {
+    try {
+      console.log('Salvando operador no servidor:', operator);
+      const response = await api.post('/operators', operator);
+      toast.success('Operador salvo no banco de dados com sucesso!');
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao salvar operador no banco de dados:', error);
+      toast.error('Falha ao salvar operador no banco de dados');
+      throw error;
+    }
+  }
+};
+
+// Remover equipamento do IndexedDB ou PostgreSQL
+export const deleteEquipmentFromServer = async (id: string): Promise<void> => {
+  if (isUsingIndexedDB()) {
+    try {
+      console.log('Removendo equipamento do IndexedDB:', id);
+      const db = await initIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction('equipments', 'readwrite');
+        const store = transaction.objectStore('equipments');
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          toast.success('Equipamento removido com sucesso!');
+          resolve();
+        };
+        
+        request.onerror = () => {
+          toast.error('Falha ao remover equipamento');
+          reject(request.error);
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao remover equipamento do IndexedDB:', error);
+      toast.error('Falha ao remover equipamento do IndexedDB');
+      throw error;
+    }
+  } else {
+    try {
+      console.log('Removendo equipamento do servidor:', id);
+      await api.delete(`/equipments/${id}`);
+      toast.success('Equipamento removido do banco de dados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover equipamento do banco de dados:', error);
+      toast.error('Falha ao remover equipamento do banco de dados');
+      throw error;
+    }
+  }
+};
+
+// Remover operador do IndexedDB ou PostgreSQL
+export const deleteOperatorFromServer = async (id: string): Promise<void> => {
+  if (isUsingIndexedDB()) {
+    try {
+      console.log('Removendo operador do IndexedDB:', id);
+      const db = await initIndexedDB();
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction('operators', 'readwrite');
+        const store = transaction.objectStore('operators');
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          toast.success('Operador removido com sucesso!');
+          resolve();
+        };
+        
+        request.onerror = () => {
+          toast.error('Falha ao remover operador');
+          reject(request.error);
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao remover operador do IndexedDB:', error);
+      toast.error('Falha ao remover operador do IndexedDB');
+      throw error;
+    }
+  } else {
+    try {
+      console.log('Removendo operador do servidor:', id);
+      await api.delete(`/operators/${id}`);
+      toast.success('Operador removido do banco de dados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover operador do banco de dados:', error);
+      toast.error('Falha ao remover operador do banco de dados');
+      throw error;
+    }
   }
 };

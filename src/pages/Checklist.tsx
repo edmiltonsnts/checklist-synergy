@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChecklistForm from '@/components/ChecklistForm';
@@ -18,7 +17,6 @@ const Checklist = () => {
   const [isLocalDb, setIsLocalDb] = useState<boolean>(false);
   const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
   
-  // Função para limpar o cache do navegador para esta página
   const clearBrowserCache = () => {
     if ('caches' in window) {
       caches.keys().then((names) => {
@@ -30,14 +28,12 @@ const Checklist = () => {
   };
   
   useEffect(() => {
-    // Verificar se está usando banco local ou remoto
     setIsLocalDb(localStorage.getItem('useLocalDb') === 'true');
     setUsingIndexedDB(isUsingIndexedDB());
     
     const fetchData = async () => {
       setLoading(true);
       
-      // Limpar qualquer cache do navegador
       clearBrowserCache();
       
       try {
@@ -59,7 +55,6 @@ const Checklist = () => {
           toast.info(`Carregando dados atualizados do servidor (${isLocalDb ? 'local' : 'remoto'})...`);
         }
         
-        // Usar timestamp aleatório para garantir dados atualizados a cada requisição
         const timestamp = Date.now();
         const randomParam = Math.random().toString(36).substring(7);
         console.log(`Requisição com timestamp: ${timestamp} e random: ${randomParam}`);
@@ -68,7 +63,6 @@ const Checklist = () => {
           console.log(`API URL atual: ${getApiUrl()}`);
         }
         
-        // Sempre usar forceRefresh=true para garantir dados atualizados
         const equipments = await getEquipmentsFromServer(true);
         const operators = await getOperatorsFromServer(true);
         
@@ -106,7 +100,6 @@ const Checklist = () => {
     setLoading(true);
     toast.info('Atualizando dados...');
     
-    // Recarregar a página com parâmetro de timestamp único para forçar nova busca
     const searchParams = new URLSearchParams(location.search);
     const equipmentId = searchParams.get('equipmentId');
     const operatorId = searchParams.get('operatorId');
