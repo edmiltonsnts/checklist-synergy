@@ -48,7 +48,7 @@ api.interceptors.response.use(
 );
 
 // Inicializa o IndexedDB
-const initIndexedDB = () => {
+const initIndexedDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('checklistDB', 1);
     
@@ -192,8 +192,10 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
           
           if (data.length === 0) {
             // Se não houver dados no IndexedDB, usar dados locais
-            const { getEquipments } = import('./checklistService');
-            getEquipments().then(localData => {
+            import('./checklistService').then(module => {
+              const localData = module.equipmentsList;
+              console.log('Carregando equipamentos locais para o IndexedDB:', localData);
+              
               // Salvar dados locais no IndexedDB para uso futuro
               const saveTransaction = db.transaction('equipments', 'readwrite');
               const saveStore = saveTransaction.objectStore('equipments');
@@ -203,6 +205,9 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
               });
               
               resolve(localData);
+            }).catch(err => {
+              console.error('Erro ao importar dados locais:', err);
+              reject(err);
             });
           } else {
             resolve(data);
@@ -215,14 +220,19 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
         };
       });
     } catch (error) {
-      console.error('Erro ao acessar IndexedDB:', error);
+      console.error('Erro ao acessar IndexedDB para equipamentos:', error);
       toast.error('Falha ao buscar equipamentos do IndexedDB. Usando dados locais.');
       
       // Fallback para dados locais
-      const { getEquipments } = await import('./checklistService');
-      const localData = await getEquipments();
-      console.log('Usando equipamentos locais:', localData);
-      return localData;
+      try {
+        const checklistService = await import('./checklistService');
+        const localData = checklistService.equipmentsList;
+        console.log('Usando equipamentos locais:', localData);
+        return localData;
+      } catch (importError) {
+        console.error('Erro ao importar dados locais:', importError);
+        return [];
+      }
     }
   } else {
     try {
@@ -289,17 +299,23 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
           
           if (data.length === 0) {
             // Se não houver dados no IndexedDB, usar dados locais
-            const { getOperators } = import('./operatorsService');
-            getOperators().then(localData => {
-              // Salvar dados locais no IndexedDB para uso futuro
-              const saveTransaction = db.transaction('operators', 'readwrite');
-              const saveStore = saveTransaction.objectStore('operators');
-              
-              localData.forEach(item => {
-                saveStore.add(item);
+            import('./operatorsService').then(module => {
+              module.getOperators().then(localData => {
+                console.log('Carregando operadores locais para o IndexedDB:', localData);
+                
+                // Salvar dados locais no IndexedDB para uso futuro
+                const saveTransaction = db.transaction('operators', 'readwrite');
+                const saveStore = saveTransaction.objectStore('operators');
+                
+                localData.forEach(item => {
+                  saveStore.add(item);
+                });
+                
+                resolve(localData);
               });
-              
-              resolve(localData);
+            }).catch(err => {
+              console.error('Erro ao importar dados locais de operadores:', err);
+              reject(err);
             });
           } else {
             resolve(data);
@@ -312,14 +328,19 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
         };
       });
     } catch (error) {
-      console.error('Erro ao acessar IndexedDB:', error);
+      console.error('Erro ao acessar IndexedDB para operadores:', error);
       toast.error('Falha ao buscar operadores do IndexedDB. Usando dados locais.');
       
       // Fallback para dados locais
-      const { getOperators } = await import('./operatorsService');
-      const localData = await getOperators();
-      console.log('Usando operadores locais:', localData);
-      return localData;
+      try {
+        const operatorsService = await import('./operatorsService');
+        const localData = await operatorsService.getOperators();
+        console.log('Usando operadores locais:', localData);
+        return localData;
+      } catch (importError) {
+        console.error('Erro ao importar dados locais de operadores:', importError);
+        return [];
+      }
     }
   } else {
     try {
@@ -328,7 +349,6 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
       const currentApiUrl = getApiUrl();
       
       console.log(`Buscando operadores do servidor com timestamp: ${timestamp} e random: ${randomParam}`);
-      console.log(`URL da API: ${currentApiUrl}`);
       
       const response = await axios({
         method: 'get',
@@ -391,7 +411,7 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
         };
       });
     } catch (error) {
-      console.error('Erro ao acessar IndexedDB:', error);
+      console.error('Erro ao acessar IndexedDB para setores:', error);
       toast.error('Falha ao buscar setores do IndexedDB.');
       return [];
     }

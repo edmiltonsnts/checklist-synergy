@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Equipment, Operator } from '@/types/checklist';
-import { getEquipmentsFromServer, getOperatorsFromServer } from '@/services/sqlServerService';
+import { getEquipmentsFromServer, getOperatorsFromServer, isUsingIndexedDB } from '@/services/sqlServerService';
 import OperatorSearchCommand from '@/components/OperatorSearchCommand';
 
 const SelectChecklist = () => {
@@ -21,14 +21,19 @@ const SelectChecklist = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
+      // Check if using IndexedDB
+      const isUsingIndexedDb = isUsingIndexedDB();
+      setUsingIndexedDB(isUsingIndexedDb);
+      
       console.log('Buscando dados atualizados às', new Date().toLocaleTimeString());
-      toast.info('Atualizando dados do servidor...');
+      toast.info(`Atualizando dados ${isUsingIndexedDb ? 'do IndexedDB' : 'do servidor'}...`);
       
       // Sempre forçar refresh para garantir dados atualizados
       const [equipmentsData, operatorsData] = await Promise.all([
@@ -40,11 +45,11 @@ const SelectChecklist = () => {
       console.log('Operadores carregados:', operatorsData.length);
       
       if (equipmentsData.length === 0) {
-        toast.warning('Nenhum equipamento encontrado no servidor');
+        toast.warning('Nenhum equipamento encontrado');
       }
       
       if (operatorsData.length === 0) {
-        toast.warning('Nenhum operador encontrado no servidor');
+        toast.warning('Nenhum operador encontrado');
       }
       
       // Ordenar operadores por nome
@@ -56,8 +61,8 @@ const SelectChecklist = () => {
       toast.success(`Dados atualizados com sucesso! (${new Date().toLocaleTimeString()})`);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
-      setError('Falha ao conectar com o servidor de banco de dados. Verifique a conexão.');
-      toast.error('Erro ao carregar dados. Verifique a conexão com o banco de dados.');
+      setError('Falha ao carregar dados. Verifique a conexão com o banco de dados.');
+      toast.error('Erro ao carregar dados. Verifique as configurações de armazenamento.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -96,7 +101,7 @@ const SelectChecklist = () => {
     setSelectedEquipmentId('');
     setSelectedOperatorId('');
     clearBrowserCache();
-    toast.info('Atualizando dados do servidor...');
+    toast.info('Atualizando dados...');
     fetchData();
   };
 
@@ -157,7 +162,7 @@ const SelectChecklist = () => {
               {!loading && !error && (equipments.length > 0 || operators.length > 0) && (
                 <span className="ml-2 text-sm font-normal text-green-600 flex items-center">
                   <Database className="h-3 w-3 mr-1" />
-                  Dados atualizados às {lastRefresh.toLocaleTimeString()}
+                  {usingIndexedDB ? 'IndexedDB' : 'Banco de dados'} atualizado às {lastRefresh.toLocaleTimeString()}
                 </span>
               )}
             </CardTitle>
@@ -174,7 +179,7 @@ const SelectChecklist = () => {
               <>
                 {equipments.length === 0 ? (
                   <div className="text-center text-red-500 p-4 border border-red-200 bg-red-50 rounded-md">
-                    Nenhum equipamento encontrado. Verifique a conexão com o banco de dados.
+                    Nenhum equipamento encontrado. Verifique a configuração de armazenamento de dados.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -199,7 +204,7 @@ const SelectChecklist = () => {
                 
                 {operators.length === 0 ? (
                   <div className="text-center text-red-500 p-4 border border-red-200 bg-red-50 rounded-md">
-                    Nenhum operador encontrado. Verifique a conexão com o banco de dados.
+                    Nenhum operador encontrado. Verifique a configuração de armazenamento de dados.
                   </div>
                 ) : (
                   <div className="space-y-2">

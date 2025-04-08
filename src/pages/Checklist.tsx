@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { getEquipmentsFromServer, getOperatorsFromServer, getApiUrl } from '@/services/sqlServerService';
+import { getEquipmentsFromServer, getOperatorsFromServer, getApiUrl, isUsingIndexedDB } from '@/services/sqlServerService';
 
 const Checklist = () => {
   const location = useLocation();
@@ -16,6 +16,7 @@ const Checklist = () => {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [operator, setOperator] = useState<Operator | null>(null);
   const [isLocalDb, setIsLocalDb] = useState<boolean>(false);
+  const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
   
   // Função para limpar o cache do navegador para esta página
   const clearBrowserCache = () => {
@@ -31,6 +32,7 @@ const Checklist = () => {
   useEffect(() => {
     // Verificar se está usando banco local ou remoto
     setIsLocalDb(localStorage.getItem('useLocalDb') === 'true');
+    setUsingIndexedDB(isUsingIndexedDB());
     
     const fetchData = async () => {
       setLoading(true);
@@ -50,13 +52,21 @@ const Checklist = () => {
         }
         
         console.log('Buscando dados para checklist - equipmentId:', equipmentId, 'operatorId:', operatorId);
-        toast.info(`Carregando dados atualizados do servidor (${isLocalDb ? 'local' : 'remoto'})...`);
+        
+        if (usingIndexedDB) {
+          toast.info(`Carregando dados do IndexedDB...`);
+        } else {
+          toast.info(`Carregando dados atualizados do servidor (${isLocalDb ? 'local' : 'remoto'})...`);
+        }
         
         // Usar timestamp aleatório para garantir dados atualizados a cada requisição
         const timestamp = Date.now();
         const randomParam = Math.random().toString(36).substring(7);
         console.log(`Requisição com timestamp: ${timestamp} e random: ${randomParam}`);
-        console.log(`API URL atual: ${getApiUrl()}`);
+        
+        if (!usingIndexedDB) {
+          console.log(`API URL atual: ${getApiUrl()}`);
+        }
         
         // Sempre usar forceRefresh=true para garantir dados atualizados
         const equipments = await getEquipmentsFromServer(true);
@@ -157,7 +167,7 @@ const Checklist = () => {
             <div className="font-medium">{equipment?.sector}</div>
           </div>
           <div className="text-xs text-blue-600 mt-1">
-            {isLocalDb ? "Usando banco de dados local" : "Usando banco de dados remoto"}
+            {usingIndexedDB ? "Usando IndexedDB" : isLocalDb ? "Usando banco de dados local" : "Usando banco de dados remoto"}
           </div>
         </div>
         
