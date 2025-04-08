@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,9 +13,14 @@ import { saveOperatorToServer, deleteOperatorFromServer } from '@/services/sqlSe
 interface OperatorManagementProps {
   operators: Operator[];
   setOperators: React.Dispatch<React.SetStateAction<Operator[]>>;
+  onDataChanged?: () => void;
 }
 
-const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setOperators }) => {
+const OperatorManagement: React.FC<OperatorManagementProps> = ({ 
+  operators, 
+  setOperators, 
+  onDataChanged 
+}) => {
   const [newOperator, setNewOperator] = useState<Partial<Operator>>({
     id: '',
     name: '',
@@ -66,6 +70,13 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
       
       // Limpar o formulário
       setNewOperator({ id: '', name: '', role: '', sector: '' });
+      
+      // Notificar que dados foram alterados
+      if (onDataChanged) {
+        onDataChanged();
+      }
+      
+      toast.success(`Operador ${operatorToAdd.name} adicionado com sucesso!`);
     } catch (error) {
       console.error('Erro ao adicionar operador:', error);
     } finally {
@@ -96,6 +107,13 @@ const OperatorManagement: React.FC<OperatorManagementProps> = ({ operators, setO
           o.role?.toLowerCase().includes(operatorSearchQuery.toLowerCase() || '')
         ));
       }
+      
+      // Notificar que dados foram alterados
+      if (onDataChanged) {
+        onDataChanged();
+      }
+      
+      toast.success('Operador removido com sucesso!');
     } catch (error) {
       console.error('Erro ao remover operador:', error);
     } finally {

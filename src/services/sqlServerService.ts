@@ -298,8 +298,8 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
           const data = request.result;
           console.log('Operadores recebidos do IndexedDB:', data);
           
-          if (data.length === 0 && forceRefresh) {
-            // Se não houver dados no IndexedDB e forceRefresh=true, usar dados locais
+          if (data.length === 0 || forceRefresh) {
+            // Se não houver dados no IndexedDB ou forceRefresh=true, usar dados locais
             import('./operatorsService').then(module => {
               module.getOperators().then(localData => {
                 console.log('Carregando operadores locais para o IndexedDB:', localData);
@@ -308,8 +308,36 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
                 const saveTransaction = db.transaction('operators', 'readwrite');
                 const saveStore = saveTransaction.objectStore('operators');
                 
+                // Limpar store antes de adicionar apenas se forceRefresh
+                if (forceRefresh && data.length > 0) {
+                  console.log('Limpando store de operadores antes de recarregar dados');
+                  const clearRequest = saveStore.clear();
+                  
+                  clearRequest.onsuccess = () => {
+                    console.log('Store de operadores limpo com sucesso');
+                  };
+                  
+                  clearRequest.onerror = (e) => {
+                    console.error('Erro ao limpar store de operadores:', e);
+                  };
+                }
+                
+                // Adicionar todos os operadores ao IndexedDB
+                let addedCount = 0;
                 localData.forEach(item => {
-                  saveStore.add(item);
+                  const addRequest = saveStore.add(item);
+                  
+                  addRequest.onsuccess = () => {
+                    addedCount++;
+                    if (addedCount === localData.length) {
+                      console.log(`${addedCount} operadores adicionados ao IndexedDB`);
+                    }
+                  };
+                  
+                  addRequest.onerror = (event) => {
+                    console.warn('Erro ao adicionar operador ao IndexedDB (pode já existir):', event);
+                    // Ignorar erros individuais para continuar o processo
+                  };
                 });
                 
                 resolve(localData);
@@ -639,18 +667,22 @@ export const saveOperatorToServer = async (operator: Operator): Promise<Operator
           
           if (existingOperator) {
             // Se já existe, atualiza
+            console.log('Atualizando operador existente:', operator.id);
             saveRequest = store.put(operator);
           } else {
             // Se não existe, adiciona
+            console.log('Adicionando novo operador:', operator.id);
             saveRequest = store.add(operator);
           }
           
           saveRequest.onsuccess = () => {
+            console.log('Operador salvo com sucesso:', operator);
             toast.success('Operador salvo no IndexedDB com sucesso!');
             resolve(operator);
           };
           
-          saveRequest.onerror = () => {
+          saveRequest.onerror = (event) => {
+            console.error('Falha ao salvar operador no IndexedDB:', event);
             toast.error('Falha ao salvar operador no IndexedDB');
             reject(saveRequest.error);
           };

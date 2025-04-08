@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChecklistForm from '@/components/ChecklistForm';
@@ -63,6 +64,7 @@ const Checklist = () => {
           console.log(`API URL atual: ${getApiUrl()}`);
         }
         
+        // Sempre forçar refresh para garantir dados atualizados
         const equipments = await getEquipmentsFromServer(true);
         const operators = await getOperatorsFromServer(true);
         

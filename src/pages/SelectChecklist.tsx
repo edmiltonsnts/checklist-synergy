@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw, AlertTriangle, Database, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import OperatorSearchCommand from '@/components/OperatorSearchCommand';
 
 const SelectChecklist = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -84,6 +84,10 @@ const SelectChecklist = () => {
     // Limpar cache ao montar o componente
     clearBrowserCache();
     
+    // Adicione um valor de timestamp para forçar refresh quando vier da área admin
+    const forceRefresh = location.state?.forceRefresh === true;
+    console.log('Force refresh from admin?', forceRefresh);
+    
     // Iniciar busca ao montar o componente - sempre forçando refresh
     fetchData();
     
@@ -94,7 +98,7 @@ const SelectChecklist = () => {
     }, 30000);
     
     return () => clearInterval(intervalId);
-  }, [fetchData, clearBrowserCache]);
+  }, [fetchData, clearBrowserCache, location.state]);
 
   const handleRefresh = () => {
     setRefreshing(true);
