@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,22 +24,22 @@ const SelectChecklist = () => {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [usingIndexedDB, setUsingIndexedDB] = useState<boolean>(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Check if using IndexedDB
+      // Always check if using IndexedDB before fetching data
       const isUsingIndexedDb = isUsingIndexedDB();
       setUsingIndexedDB(isUsingIndexedDb);
       
       console.log('Buscando dados atualizados às', new Date().toLocaleTimeString());
       toast.info(`Atualizando dados ${isUsingIndexedDb ? 'do IndexedDB' : 'do servidor'}...`);
       
-      // Sempre forçar refresh para garantir dados atualizados
+      // Always force refresh to get latest data
       const [equipmentsData, operatorsData] = await Promise.all([
-        getEquipmentsFromServer(true),
-        getOperatorsFromServer(true)
+        getEquipmentsFromServer(forceRefresh),
+        getOperatorsFromServer(forceRefresh)
       ]);
       
       console.log('Equipamentos carregados:', equipmentsData.length);
@@ -84,20 +85,13 @@ const SelectChecklist = () => {
     // Limpar cache ao montar o componente
     clearBrowserCache();
     
-    // Adicione um valor de timestamp para forçar refresh quando vier da área admin
+    // Verificar se há um pedido para forçar atualização vindo da página de admin
     const forceRefresh = location.state?.forceRefresh === true;
     console.log('Force refresh from admin?', forceRefresh);
     
-    // Iniciar busca ao montar o componente - sempre forçando refresh
-    fetchData();
+    // Iniciar busca ao montar o componente - sempre forçando refresh se vier da admin
+    fetchData(forceRefresh);
     
-    // Configurar um intervalo para atualizar os dados periodicamente
-    const intervalId = setInterval(() => {
-      console.log('Atualizando dados automaticamente...');
-      fetchData();
-    }, 30000);
-    
-    return () => clearInterval(intervalId);
   }, [fetchData, clearBrowserCache, location.state]);
 
   const handleRefresh = () => {
@@ -106,7 +100,7 @@ const SelectChecklist = () => {
     setSelectedOperatorId('');
     clearBrowserCache();
     toast.info('Atualizando dados...');
-    fetchData();
+    fetchData(true); // Forçar refresh dos dados
   };
 
   const handleStartChecklist = () => {

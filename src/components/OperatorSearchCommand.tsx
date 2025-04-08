@@ -12,7 +12,6 @@ import {
 import { Operator } from '@/types/checklist';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import { searchOperators } from '@/services/operatorsService';
 
 interface OperatorSearchCommandProps {
   onSelect: (operator: Operator) => void;
@@ -27,9 +26,17 @@ const OperatorSearchCommand: React.FC<OperatorSearchCommandProps> = ({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Operator[]>([]);
 
+  // Update results when operators prop changes or query changes
   useEffect(() => {
     if (query) {
-      setResults(searchOperators(query));
+      // Filter operators based on query
+      const filteredResults = operators.filter(operator => 
+        operator.name.toLowerCase().includes(query.toLowerCase()) || 
+        operator.id.toLowerCase().includes(query.toLowerCase()) || 
+        operator.sector.toLowerCase().includes(query.toLowerCase()) ||
+        (operator.role && operator.role.toLowerCase().includes(query.toLowerCase()))
+      );
+      setResults(filteredResults.sort((a, b) => a.name.localeCompare(b.name)));
     } else {
       // Ensure operators are always sorted alphabetically
       setResults([...operators].sort((a, b) => a.name.localeCompare(b.name)));
