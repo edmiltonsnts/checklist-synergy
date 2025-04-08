@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Trash, Save, Edit } from 'lucide-react';
 import { Equipment } from '@/types/checklist';
 import { toast } from 'sonner';
-import { addEquipmentToServer, updateEquipmentInServer, deleteEquipmentFromServer } from '@/services/sqlServerService';
+import { saveEquipmentToServer, deleteEquipmentFromServer } from '@/services/sqlServerService';
 
 interface EquipmentManagementProps {
   equipments: Equipment[];
@@ -52,7 +52,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
       }
 
       // Adicionar ao servidor/banco de dados
-      await addEquipmentToServer(newEquipment);
+      await saveEquipmentToServer(newEquipment);
       
       // Atualizar estado local
       setEquipments([...equipments, newEquipment]);
@@ -83,7 +83,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({
   // Handler para salvar edição
   const handleSaveEdit = async (id: string) => {
     try {
-      await updateEquipmentInServer(editFormData);
+      await saveEquipmentToServer(editFormData);
       
       setEquipments(equipments.map(eq => 
         eq.id === id ? editFormData : eq
