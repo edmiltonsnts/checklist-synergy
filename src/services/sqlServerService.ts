@@ -136,20 +136,21 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
         });
         
         request.onsuccess = () => {
-          toast.success('Checklist salvo no IndexedDB com sucesso!');
+          toast.success('Checklist salvo com sucesso!');
           // Garantimos que o ID retornado é do tipo number para corresponder à assinatura da função
           const newId = typeof request.result === 'number' ? request.result : Number(request.result);
           resolve({ ...checklist, id: newId });
         };
         
         request.onerror = () => {
-          toast.error('Falha ao salvar no IndexedDB');
+          // Removed error toast
+          console.error('Falha ao salvar no IndexedDB');
           reject(request.error);
         };
       });
     } catch (error) {
       console.error('Erro ao salvar checklist no IndexedDB:', error);
-      toast.error('Falha ao salvar no IndexedDB. Salvando localmente como backup.');
+      // Removed error toast
       
       // Fallback para salvar localmente
       const { saveChecklistToHistory } = await import('./historyService');
@@ -161,11 +162,11 @@ export const saveChecklistToServer = async (checklist: Checklist): Promise<Check
     try {
       console.log('Salvando checklist no servidor:', checklist);
       const response = await api.post('/checklists', checklist);
-      toast.success('Checklist salvo no banco de dados com sucesso!');
+      toast.success('Checklist salvo com sucesso!');
       return response.data;
     } catch (error) {
       console.error('Erro ao salvar checklist no banco de dados:', error);
-      toast.error('Falha ao salvar no banco de dados. Salvando localmente como backup.');
+      // Removed error toast
       
       // Fallback para salvar localmente se o banco de dados estiver inacessível
       const { saveChecklistToHistory } = await import('./historyService');
@@ -223,7 +224,7 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
       });
     } catch (error) {
       console.error('Erro ao acessar IndexedDB para equipamentos:', error);
-      toast.error('Falha ao buscar equipamentos do IndexedDB. Usando dados locais.');
+      // Removed error toast
       
       // Fallback para dados locais
       try {
@@ -272,7 +273,7 @@ export const getEquipmentsFromServer = async (forceRefresh = false): Promise<Equ
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar equipamentos do banco de dados:', error);
-      toast.error('Falha ao buscar equipamentos do servidor. Usando dados locais.');
+      // Removed error toast
       
       const { getEquipments } = await import('./checklistService');
       const localData = await getEquipments();
@@ -358,7 +359,7 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
       });
     } catch (error) {
       console.error('Erro ao acessar IndexedDB para operadores:', error);
-      toast.error('Falha ao buscar operadores do IndexedDB. Usando dados locais.');
+      // Removed error toast
       
       // Fallback para dados locais
       try {
@@ -406,7 +407,7 @@ export const getOperatorsFromServer = async (forceRefresh = false): Promise<Oper
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar operadores do banco de dados:', error);
-      toast.error('Falha ao buscar operadores do servidor. Usando dados locais.');
+      // Removed error toast
       
       const { getOperators } = await import('./operatorsService');
       const localData = await getOperators();
@@ -441,7 +442,7 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
       });
     } catch (error) {
       console.error('Erro ao acessar IndexedDB para setores:', error);
-      toast.error('Falha ao buscar setores do IndexedDB.');
+      // Removed error toast
       return [];
     }
   } else {
@@ -479,7 +480,7 @@ export const getSectorsFromServer = async (forceRefresh = false): Promise<Sector
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar setores do banco de dados:', error);
-      toast.error('Falha ao buscar setores do servidor.');
+      // Removed error toast
       return [];
     }
   }
@@ -521,7 +522,7 @@ export const getChecklistHistoryFromServer = async (): Promise<ChecklistHistory[
       });
     } catch (error) {
       console.error('Erro ao acessar IndexedDB para histórico:', error);
-      toast.error('Falha ao buscar histórico do IndexedDB. Usando dados locais.');
+      // Removed error toast
       
       // Fallback para dados locais
       const { getChecklistHistory } = await import('./historyService');
@@ -537,7 +538,7 @@ export const getChecklistHistoryFromServer = async (): Promise<ChecklistHistory[
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar histórico do banco de dados:', error);
-      toast.error('Falha ao buscar histórico do servidor. Usando dados locais.');
+      // Removed error toast
       
       // Fallback para dados locais
       const { getChecklistHistory } = await import('./historyService');
